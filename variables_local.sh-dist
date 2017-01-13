@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# This file is for variables that are local to the user running the release
+
+# Path to the location of your git repositories
+# NOTE: This will be depricated in favor of clean checkouts
+NUBIS_PATH='/path/to/project/nubis'
+log_term 3 "NUBIS_PATH=${NUBIS_PATH}"
+
+# Your GitHub login (Where you fork Nubis repositories)
+GITHUB_LOGIN='tinnightcap'
+log_term 3 "GITHUB_LOGIN=${GITHUB_LOGIN}"
+
+# The aws-vault profile where all assets will be built
+# NOTE: This should be 'nubis-market-admin' for actual release builds
+PROFILE='nubis-market-admin'
+log_term 3 "PROFILE=${PROFILE}"
+
+# Your aws-vault command
+AWS_VAULT_COMMAND="aws-vault --backend=kwallet exec --assume-role-ttl=60m $PROFILE --"
+log_term 3 "AWS_VAULT_COMMAND=${AWS_VAULT_COMMAND}"
