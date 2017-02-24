@@ -5,17 +5,21 @@
 # Path to the location of your git repositories
 # NOTE: This will be depricated in favor of clean checkouts
 NUBIS_PATH='/path/to/project/nubis'
-log_term 3 "NUBIS_PATH=${NUBIS_PATH}"
+log_term 2 "NUBIS_PATH=${NUBIS_PATH}"
+log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # Your GitHub login (Where you fork Nubis repositories)
 GITHUB_LOGIN='tinnightcap'
-log_term 3 "GITHUB_LOGIN=${GITHUB_LOGIN}"
+log_term 2 "GITHUB_LOGIN=${GITHUB_LOGIN}"
+log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # The aws-vault profile where all assets will be built
 # NOTE: This should be 'nubis-market-admin' for actual release builds
 PROFILE='nubis-market-admin'
-log_term 3 "PROFILE=${PROFILE}"
+log_term 2 "PROFILE=${PROFILE}"
+log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # Your aws-vault command
 AWS_VAULT_COMMAND="aws-vault --backend=kwallet exec --assume-role-ttl=60m $PROFILE --"
-log_term 3 "AWS_VAULT_COMMAND=${AWS_VAULT_COMMAND}"
+log_term 2 "AWS_VAULT_COMMAND=${AWS_VAULT_COMMAND}"
+log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"

@@ -69,7 +69,7 @@ get_pagination_urls () {
 }
 
 collect_data () {
-    # Clear the output file
+    # Clear the temporary output file
     :> ${TMP_OUTPUT_FILE}
     # Paginate through grabbing data as we go
     while [ ${DONE:-0} -ne 1 ]; do
@@ -100,6 +100,6 @@ clean_up () {
  rm -f ${TMP_OUTPUT_FILE}
 }
 
-#collect_data
-#parse_data
-#clean_up
+collect_data
+parse_data
+clean_up

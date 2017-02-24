@@ -5,6 +5,7 @@ upload_stacks () {
     local _RELEASE="${1}"
     if [ ${_RELEASE:-NULL} == 'NULL' ]; then
         log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
     fi
@@ -34,9 +35,11 @@ upload_stacks () {
         local _EDIT_VERSION=$(cat ${TEMPLATE} | jq --raw-output '"\(.Parameters.StacksVersion.Default)"')
         if [ ${_EDIT_VERSION:-0} != "null" ]; then
             log_term 1 -e "Updating StacksVersion in \"${TEMPLATE}\". (${_COUNT} of ${#TEMPLATE_ARRAY[*]})"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             cat "${TEMPLATE}" | jq ".Parameters.StacksVersion.Default|=\"${_RELEASE}\"" | sponge "${TEMPLATE}"
         else
             log_term 1 -e "StacksVersion unset in \"${TEMPLATE}\". (${_COUNT} of ${#TEMPLATE_ARRAY[*]})"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         fi
         let _COUNT=${_COUNT}+1
     done
@@ -46,6 +49,7 @@ upload_stacks () {
     if [ $? != '0' ]; then
         log_term 0 "Uploads for ${_RELEASE} failed."
         log_term 0 "Aborting....."
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
     check_in_changes 'nubis-stacks' "Update StacksVersion for ${RELEASE} release"
@@ -55,6 +59,7 @@ upload_lambda_functions () {
     local _RELEASE="${1}"
     if [ ${_RELEASE:-NULL} == 'NULL' ]; then
         log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
     fi
@@ -62,6 +67,7 @@ upload_lambda_functions () {
     if [ $? != '0' ]; then
         log_term 0 "Uploads for ${_RELEASE} failed."
         log_term 0 "Aborting....."
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
     check_in_changes 'nubis-stacks' "Updated lambda function bundles for ${RELEASE} release"

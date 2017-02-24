@@ -25,3 +25,5 @@ _testmain.go
 
 # Local variables
 variables_local.sh
+
+logs/
