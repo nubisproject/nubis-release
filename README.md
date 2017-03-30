@@ -2,6 +2,10 @@
 
 # Nubis Release
 
+[![Version](https://img.shields.io/github/release/nubisproject/nubis-release.svg?maxAge=2592000)](https://github.com/nubisproject/nubis-release/releases)
+[![Build Status](https://img.shields.io/travis/nubisproject/nubis-release/master.svg?maxAge=2592000)](https://travis-ci.org/nubisproject/nubis-release)
+[![Issues](https://img.shields.io/github/issues/nubisproject/nubis-release.svg?maxAge=2592000)](https://github.com/nubisproject/nubis-release/issues)
+
 This tooling is designed for releasing the Nubis project. In general this
 tooling should only be used as part of the release process. This tool is not
 intended for building AMIs as part of the development process as it modifies a
