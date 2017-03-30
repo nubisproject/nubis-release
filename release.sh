@@ -197,35 +197,50 @@ while [ "$1" != "" ]; do
             # Set to skip interactive prompts
             export NON_INTERACTIVE='yes'
         ;;
+        -i | --instructions )
+            source_files
+            instructions
+            GOT_COMMAND=1
+        ;;
+        -S | --get-release-stats )
+            source_files
+            release_stats
+            GOT_COMMAND=1
+        ;;
          -h | -H | --help )
             echo -en "$0\n\n"
             echo -en "Usage: $0 [options] command [repository]\n\n"
             echo -en "Commands:\n"
-            echo -en "  create-milestones [rel]    Create all milestones in Github\n"
-            echo -en "  close-milestones [rel]     Close all milestones in Github\n"
-            echo -en "  upload-assets [rel]        Upload aritfacts to S3\n"
-            echo -en "  build [repo] [rel]         Build AMIs for [REPO] repository at [REL] release\n"
-            echo -en "  release [repo] [rel]       Release [REPO] repository at [REL] release\n"
-            echo -en "  build-and-release          Build and release named repository\n\n"
-            echo -en "  build-and-release-all      Build and release all repositories (set in variables file)\n\n"
-            echo -en "  build-all                  Build all infrastructure repositories (set in variables file)\n\n"
-            echo -en "  generate-csv [file]        Generate CSV file of release issues. Optionally declare [file]name\n\n"
-            echo -en "  instructions               Echo build steps\n\n"
-            echo -en "  install-rvm                Attempt to install rvm EXPERIMENTAL\n\n"
+            echo -en "  create-milestones [REL]             Create all milestones in Github\n"
+            echo -en "  close-milestones [REL]              Close all milestones in Github\n"
+            echo -en "  upload-assets [REL]                 Upload aritfacts to S3\n"
+            echo -en "  build [REPO] [REL]                  Build AMIs for [REPO] repository at [REL] release\n"
+            echo -en "  setup-release [REPO] [REL] [REF]    Checks out repository [REPO] repository for [REL] release at [REF]\n"
+            echo -en "  complete-release [REPO] [REL]       Release [REPO] repository at [REL] release\n"
+            echo -en "  release [REPO] [REL]                Release [REPO] repository at [REL] release\n"
+            echo -en "  build-and-release [REPO] [REL]      Build and release named repository\n\n"
+            echo -en "  build-and-release-all [REL]         Build and release all repositories (set in variables file)\n\n"
+            echo -en "  build-all [REL]                     Build all infrastructure repositories (set in variables file)\n\n"
+            echo -en "  patch-release-setup  [REL] [REF]    Checks out repositories at a given ref\n\n"
+            echo -en "  patch-release-complete [REL]        Updates files and releases repositories\n\n"
+            echo -en "  generate-csv [file]                 Generate CSV file of release issues. Optionally declare [file]name\n\n"
+            echo -en "  install-rvm                         Attempt to install rvm EXPERIMENTAL\n\n"
             echo -en "Options:\n"
-            echo -en "  --help      -h          Print this help information and exit\n"
-            echo -en "  --path      -p          Specify a path where your nubis repositories are checked out\n"
-            echo -en "                            Defaults to '${REPOSITORY_PATH}'\n"
-            echo -en "  --login     -l          Specify a login to use when forking repositories\n"
-            echo -en "                            Defaults to '${GITHUB_LOGIN}'\n"
-            echo -en "  --profile   -P          Specify a profile to use when uploading the files\n"
-            echo -en "                            Defaults to '$PROFILE'\n"
-            echo -en "  --non-interactive -y    Set to skip all interactive prompts\n"
-            echo -en "  --info      -v          Turn on info, should be set before other arguments\n"
-            echo -en "  --verbose   -vv         Turn on verbosity, should be set before other arguments\n"
-            echo -en "  --debug     -vvv        Turn on debugging, should be set before other arguments\n"
-            echo -en "  --setx      -x          Turn on bash setx, should be set before other arguments\n"
-            echo -en "                            Basically set -x\n\n"
+            echo -en "  --help              -h      Print this help information and exit\n"
+            echo -en "  --instructions      -i      Echo build steps\n\n"
+            echo -en "  --get-release-stats -S      Help for generating stats for release documentation\n\n"
+            echo -en "  --path              -p      Specify a path where your nubis repositories are checked out\n"
+            echo -en "                                Defaults to '${REPOSITORY_PATH}'\n"
+            echo -en "  --login             -l      Specify a login to use when forking repositories\n"
+            echo -en "                                Defaults to '${GITHUB_LOGIN}'\n"
+            echo -en "  --profile           -P      Specify a profile to use when uploading the files\n"
+            echo -en "                                Defaults to '$PROFILE'\n"
+            echo -en "  --non-interactive   -y      Set to skip all interactive prompts\n"
+            echo -en "  --info              -v      Turn on info, should be set before other arguments\n"
+            echo -en "  --verbose           -vv     Turn on verbosity, should be set before other arguments\n"
+            echo -en "  --debug             -vvv    Turn on debugging, should be set before other arguments\n"
+            echo -en "  --setx              -x      Turn on bash setx, should be set before other arguments\n"
+            echo -en "                                Basically set -x\n\n"
             exit 0
         ;;
         create-milestones )
@@ -344,16 +359,6 @@ while [ "$1" != "" ]; do
             CSV_FILE="${2}"
             source_files
             generate_release_csv "${CSV_FILE}"
-            GOT_COMMAND=1
-        ;;
-        -i | instructions )
-            source_files
-            instructions
-            GOT_COMMAND=1
-        ;;
-        -S | get-release-stats )
-            source_files
-            release_stats
             GOT_COMMAND=1
         ;;
         install-rvm )
