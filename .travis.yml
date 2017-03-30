@@ -12,7 +12,7 @@ addons:
     packages:
     - shellcheck
 script:
-- travis/run-checks
+- nubis/travis/run-checks
 notifications:
   slack:
     secure: Mop2UxfGDXWcETYYw4RhnCgNdlq4nohgsLf/CJXImt5+fJX/smXdi+/v7W7/vt/6RhgWxeQp4uUybjHEPAhGx8/J3IrvIz/qPbXHjBK8TcU5F2oCMNp3v21nYS3U81nDxcUSIlDc5WnpVBaxgo5aelwRdYhXHowDVIPpdYQRWx8=
