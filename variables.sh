@@ -34,6 +34,8 @@ log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 # Finish by sourcing the local variables file if it exists
 # Tgis allows that file to override any varables in this file
 if [ -f ./variables_local.sh ]; then
+    # https://github.com/koalaman/shellcheck/wiki/SC1091
+    # shellcheck disable=SC1091
     source ./variables_local.sh
 else
     log_term 0 "You need to set up your 'variables_local.sh' file"
