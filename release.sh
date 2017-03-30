@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# TODO: Branch for non-dev release
 # TODO: If nubis-deploy terraform modules are pinned to master (not a version) they will not be caught by these regexes.
-# TODO: enable patch release, hook for checking out previous release instead of master
+#+ Change them to master for all *-dev release builds, detect master and change to release version on release
+#
 # TODO: upload_assets should check timestamp and not upload if there are no updates (improves speed)
 # TODO: Create docker container with all dependancies
+# TODO: Update parallels to output logs to build specific directory
 
 # Make sure we capture failures from pipe commands
 set -o pipefail
@@ -25,40 +26,47 @@ shopt -s extglob
 LOGGER=/usr/bin/logger
 if [ ! -x $LOGGER ]; then
     echo "ERROR: 'logger' binary not found - Aborting"
-    echo "ERROR: '$BASH_SOURCE' Line: '$LINENO'"
+    echo "ERROR: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     exit 2
 fi
 log_term () {
-    if [ ${VERBOSE_INTERNAL:-0} -ge 0 ] && [ ${1} == 0 ]; then
-        $($LOGGER -p local7.warning -t nubis-release "$2")
-        if [ ${VERBOSE_SILENT:-0} != 1 ]; then
-            echo ${3} "${2}" 1>&2
+    if [ "${VERBOSE_INTERNAL:-0}" -ge 0 ] && [ "${1}" == 0 ]; then
+        $LOGGER -p local7.warning -t nubis-release "$2"
+        if [ "${VERBOSE_SILENT:-0}" != 1 ]; then
+            echo "${3}" "${2}" 1>&2
         fi
     fi
-    if [ ${VERBOSE_INTERNAL:-0} -gt 0 ] && [ ${1} == 1 ]; then
-        $($LOGGER -p local7.warning -t nubis-release "$2")
-        if [ ${VERBOSE_TERMINAL:-0} == 1 ] && [ ${VERBOSE_SILENT:-0} != 1 ]; then
-            echo ${3} "${2}" 1>&2
+    if [ "${VERBOSE_INTERNAL:-0}" -gt 0 ] && [ "${1}" == 1 ]; then
+        $LOGGER -p local7.warning -t nubis-release "$2"
+        if [ "${VERBOSE_TERMINAL:-0}" == 1 ] && [ "${VERBOSE_SILENT:-0}" != 1 ]; then
+            echo "${3}" "${2}" 1>&2
         fi
     fi
-    if [ ${VERBOSE_INTERNAL:-0} -gt 1 ] && [ ${1} == 2 ]; then
-        $($LOGGER -p local7.warning -t nubis-release "$2")
-        if [ ${VERBOSE_TERMINAL:-0} == 1 ] && [ ${VERBOSE_SILENT:-0} != 1 ]; then
-            echo ${3} "${2}" 1>&2
+    if [ "${VERBOSE_INTERNAL:-0}" -gt 1 ] && [ "${1}" == 2 ]; then
+        $LOGGER -p local7.warning -t nubis-release "$2"
+        if [ "${VERBOSE_TERMINAL:-0}" == 1 ] && [ "${VERBOSE_SILENT:-0}" != 1 ]; then
+            echo "${3}" "${2}" 1>&2
         fi
     fi
-    if [ ${VERBOSE_INTERNAL:-0} -gt 2 ] && [ ${1} == 3 ]; then
-        $($LOGGER -p local7.warning -t nubis-release "$2")
-        if [ ${VERBOSE_TERMINAL:-0} == 1 ] && [ ${VERBOSE_SILENT:-0} != 1 ]; then
-            echo ${3} "${2}" 1>&2
+    if [ "${VERBOSE_INTERNAL:-0}" -gt 2 ] && [ "${1}" == 3 ]; then
+        $LOGGER -p local7.warning -t nubis-release "$2"
+        if [ "${VERBOSE_TERMINAL:-0}" == 1 ] && [ "${VERBOSE_SILENT:-0}" != 1 ]; then
+            echo "${3}" "${2}" 1>&2
         fi
     fi
 }
+
+# If we set -x and are in a sub-call, reset for sub-shell
+if [ "${SET_X:-NULL}" != 'NULL' ]; then
+    set -x
+fi
 
 # Source the variables file
 if [ -f ./variables.sh ]; then
     log_term 2 "Sourcing: ./variables.sh"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    # https://github.com/koalaman/shellcheck/wiki/SC1091
+    # shellcheck disable=SC1091
     source ./variables.sh
 else
     echo "ERROR: No 'variables.sh' file found"  1>&2
@@ -72,13 +80,17 @@ source_files () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
     for FILE in ${LIB_FILES[*]}; do
-        if [ -f ./bin/${FILE} ]; then
+        if [ -f ./bin/"${FILE}" ]; then
         log_term 2 "Sourcing: ./bin/${FILE}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            source ./bin/${FILE}
+            # https://github.com/koalaman/shellcheck/wiki/SC1090
+            # shellcheck source=/dev/null.
+            # https://github.com/koalaman/shellcheck/wiki/SC1091
+            # shellcheck disable=SC1091
+            source ./bin/"${FILE}"
         else
             log_term 0 "ERROR: File './bin/${FILE}' not found"
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             exit 1
         fi
     done
@@ -86,53 +98,77 @@ source_files () {
 
 instructions () {
     test_for_rvm
+    echo -e "\n\e[1;4;33mNormal Release:\e[0m\n"
     echo "rvm use 2.1"
     echo "RELEASE='v1.4.0'"
     echo "$0 --non-interactive build-and-release-all \${RELEASE}"
-    echo "$0 close-milestones \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables.sh"
     echo "vi ./variables.sh"
     echo "$0 generate-csv"
     echo "Create a release presentation and export the pdf to be added to the nubis-docs/presentations folder:"
     echo "https://docs.google.com/a/mozilla.com/presentation/d/1IEyH3eDbAha1eFCfeDtHryME-1-2xeGcSgOy1HJmVgc/edit?usp=sharing"
+    echo "$0 get-release-stats"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
     echo "RELEASE='v1.X.0' # For the next release"
     echo "$0 create-milestones \${RELEASE}"
     echo "$0 --non-interactive build-all \${RELEASE}-dev"
+
+    echo -e "\n\n\e[1;4;33mPatch release:\e[0m\n"
+    echo "rvm use 2.1"
+    echo "RELEASE='v1.4.1'"
+    echo "PREVIOUS_RELEASE='v1.4.0' # This is the release the patch will use as a starting point, a git ref."
+    echo "$0 --non-interactive patch-release-setup \${RELEASE} \${PREVIOUS_RELEASE}"
+    echo "Perform manual patching"
+    echo "$0 --non-interactive patch-release-complete \${RELEASE}"
+    echo "Using the nubis-docs/templates/announce.txt send an email to:"
+    echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
+    echo -e "\n"
+}
+
+release_stats () {
+    echo -e "\nYou should update the release dates in the variables.sh file to get accurate links with this function."
+    echo -e "\n\e[1;4;33mPull Requests Merged:\e[0m\n"
+    echo "https://github.com/pulls?utf8=%E2%9C%93&q=is%3Apr+user%3ANubisproject+merged%3A${RELEASE_DATES}+"
+    echo -e "\n\e[1;4;33mIssues Opened Since Last Release:\e[0m\n"
+    echo "https://github.com/issues?utf8=%E2%9C%93&q=is%3Aissue+user%3Anubisproject+created%3A${RELEASE_DATES}+"
+    echo -e "\n\e[1;4;33mIssues Closed:\e[0m\n"
+    echo "https://github.com/issues?utf8=%E2%9C%93&q=is%3Aclosed+is%3Aissue+user%3Anubisproject+closed%3A${RELEASE_DATES}"
+    echo -e "\n\e[1;4;33mIssues Remaining:\e[0m\n"
+    echo "https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+user%3Anubisproject"
 }
 
 # Grab and setup called options
 while [ "$1" != "" ]; do
     case $1 in
         -s | --silent)
-            VERBOSE_SILENT=1
+            export VERBOSE_SILENT=1
             log_term 2 "Terminal output silent set to: ${VERBOSE_SILENT}"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         ;;
         -v | --info )
-            VERBOSE_INTERNAL=1
+            export VERBOSE_INTERNAL=1
             log_term 2 "Verbosity level set to: ${VERBOSE_INTERNAL}"
-            VERBOSE_TERMINAL=1
+            export VERBOSE_TERMINAL=1
             log_term 2 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}. Disable with '--silent'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         ;;
         -vv | --verbose )
-            VERBOSE_INTERNAL=2
+            export VERBOSE_INTERNAL=2
             log_term 2 "Verbosity level set to: ${VERBOSE_INTERNAL}"
-            VERBOSE_TERMINAL=1
+            export VERBOSE_TERMINAL=1
             log_term 2 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}. Disable with '--silent'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             ;;
         -vvv | --debug )
-            VERBOSE_INTERNAL=3
+            export VERBOSE_INTERNAL=3
             log_term 2 "Verbosity level set to: ${VERBOSE_INTERNAL}"
-            VERBOSE_TERMINAL=1
+            export VERBOSE_TERMINAL=1
             log_term 2 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}. Disable with '--silent'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         ;;
         -T | --terminal )
-            VERBOSE_TERMINAL=1
+            export VERBOSE_TERMINAL=1
             log_term 1 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         ;;
@@ -140,32 +176,31 @@ while [ "$1" != "" ]; do
             log_term 1 "Setting 'set -x'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             set -x
+            export SET_X=1
         ;;
         -p | --path )
-            # The path to where the nubis repositories are checked out
-            NUBIS_PATH=$2
+            # The path to where repositories are checked out
+            export REPOSITORY_PATH=$2
             shift
         ;;
         -l | --login )
             # The github login to fork new repositories against
-            GITHUB_LOGIN=$2
+            export GITHUB_LOGIN=$2
             shift
         ;;
         -P | --profile )
-            # The profile to use to upload the files
-            PROFILE=$2
+            # The profile to use to upload files
+            export PROFILE=$2
             shift
         ;;
         -y | --non-interactive )
             # Set to skip interactive prompts
-            NON_INTERACTIVE='yes'
+            export NON_INTERACTIVE='yes'
         ;;
          -h | -H | --help )
             echo -en "$0\n\n"
             echo -en "Usage: $0 [options] command [repository]\n\n"
             echo -en "Commands:\n"
-            echo -en "  update [repo]              Update repository [repo]\n"
-            echo -en "  update-all                 Update all repositories\n"
             echo -en "  create-milestones [rel]    Create all milestones in Github\n"
             echo -en "  close-milestones [rel]     Close all milestones in Github\n"
             echo -en "  upload-assets [rel]        Upload aritfacts to S3\n"
@@ -180,7 +215,7 @@ while [ "$1" != "" ]; do
             echo -en "Options:\n"
             echo -en "  --help      -h          Print this help information and exit\n"
             echo -en "  --path      -p          Specify a path where your nubis repositories are checked out\n"
-            echo -en "                            Defaults to '${NUBIS_PATH}'\n"
+            echo -en "                            Defaults to '${REPOSITORY_PATH}'\n"
             echo -en "  --login     -l          Specify a login to use when forking repositories\n"
             echo -en "                            Defaults to '${GITHUB_LOGIN}'\n"
             echo -en "  --profile   -P          Specify a profile to use when uploading the files\n"
@@ -193,88 +228,132 @@ while [ "$1" != "" ]; do
             echo -en "                            Basically set -x\n\n"
             exit 0
         ;;
-        update )
-            REPOSITORY="${2}"
-            shift
-            source_files
-            update_repository
-            GOT_COMMAND=1
-        ;;
-        update-all )
-            source_files
-            update_all_repositories
-            GOT_COMMAND=1
-        ;;
         create-milestones )
             RELEASE="${2}"
-            shift
             source_files
-            create_milestones ${RELEASE}
+            create_milestones "${RELEASE}"
             GOT_COMMAND=1
         ;;
         close-milestones )
             RELEASE="${2}"
-            shift
             source_files
-            close_milestones ${RELEASE}
+            close_milestones "${RELEASE}"
             GOT_COMMAND=1
         ;;
         upload-assets )
             RELEASE="${2}"
-            shift
             source_files
-#            upload_stacks ${RELEASE}
-            upload_lambda_functions ${RELEASE}
+            upload_lambda_functions "${RELEASE}"
             GOT_COMMAND=1
         ;;
         build )
             REPOSITORY="${2}"
             RELEASE="${3}"
-            shift
             source_files
             build_amis "${REPOSITORY}" "${RELEASE}"
+            GOT_COMMAND=1
+        ;;
+        setup-release )
+            REPOSITORY="${2}"
+            RELEASE="${3}"
+            GIT_REF="${4}"
+            source_files
+            repository_setup_release "${REPOSITORY}" "${RELEASE}" "${GIT_REF}"
+            GOT_COMMAND=1
+        ;;
+        complete-release )
+            REPOSITORY="${2}"
+            RELEASE="${3}"
+            source_files
+            repository_complete_release "${REPOSITORY}" "${RELEASE}"
             GOT_COMMAND=1
         ;;
         release )
             REPOSITORY="${2}"
             RELEASE="${3}"
-            shift
+            SKIP_SETUP="${4}"
             source_files
-            release_repository "${REPOSITORY}" "${RELEASE}"
+            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
+                $0 setup-release "${REPOSITORY}" "${RELEASE}"
+            fi
+            $0 complete-release "${REPOSITORY}" "${RELEASE}"
             GOT_COMMAND=1
         ;;
         build-and-release )
             REPOSITORY="${2}"
             RELEASE="${3}"
-            shift
+            SKIP_SETUP="${4}"
             source_files
-            build_and_release "${REPOSITORY}" "${RELEASE}"
+            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
+                # Set up release
+                log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
+                log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                $0 setup-release "${REPOSITORY}" "${RELEASE}"
+                if [ $? != '0' ]; then
+                    log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
+                    log_term 0 "Aborting....."
+                    exit 1
+                fi
+            fi
+            # Build the AMI
+            log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            $0 build "${REPOSITORY}" "${RELEASE}"
+            if [ $? != '0' ]; then
+                log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
+                log_term 0 "Aborting....."
+                exit 1
+            fi
+            # Release repository
+            log_term 1 "\nReleasing repository: \"${REPOSITORY}\"." -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            $0 complete-release "${REPOSITORY}" "${RELEASE}"
+            if [ $? != '0' ]; then
+                log_term 0 "Release for '${REPOSITORY}' failed. Unable to continue."
+                log_term 0 "Aborting....."
+                exit 1
+            fi
             GOT_COMMAND=1
         ;;
         build-and-release-all )
             RELEASE="${2}"
-            shift
             source_files
             build_and_release_all "${RELEASE}"
             GOT_COMMAND=1
         ;;
         build-all )
             RELEASE="${2}"
-            shift
             source_files
             build_and_release_all "${RELEASE}" 'skip-release'
             GOT_COMMAND=1
         ;;
+        patch-release-setup )
+            RELEASE="${2}"
+            GIT_REF="${3}"
+            source_files
+            patch_release_setup "${RELEASE}" "${GIT_REF}"
+            GOT_COMMAND=1
+        ;;
+        patch-release-complete )
+            RELEASE="${2}"
+            source_files
+            build_and_release_all "${RELEASE}" 'skip-setup'
+            GOT_COMMAND=1
+        ;;
         generate-csv )
             CSV_FILE="${2}"
-            shift
             source_files
             generate_release_csv "${CSV_FILE}"
             GOT_COMMAND=1
         ;;
-        instructions )
+        -i | instructions )
             source_files
             instructions
+            GOT_COMMAND=1
+        ;;
+        -S | get-release-stats )
+            source_files
+            release_stats
             GOT_COMMAND=1
         ;;
         install-rvm )
@@ -287,7 +366,6 @@ while [ "$1" != "" ]; do
             source_files
             RET=$(testing "${RELEASE}")
             echo "RET: $RET"
-            shift
             GOT_COMMAND=1
         ;;
     esac
@@ -295,7 +373,7 @@ while [ "$1" != "" ]; do
 done
 
 # If we did not get a valid command print the help message
-if [ ${GOT_COMMAND:-0} == 0 ]; then
+if [ "${GOT_COMMAND:-0}" == 0 ]; then
     $0 --help
 fi
 

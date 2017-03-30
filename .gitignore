@@ -27,3 +27,5 @@ _testmain.go
 variables_local.sh
 
 logs/
+
+.repositories/

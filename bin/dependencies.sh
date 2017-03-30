@@ -1,4 +1,6 @@
 #!/bin/bash
+# shellcheck disable=SC2034
+# https://github.com/koalaman/shellcheck/wiki/SC2034
 #
 # This is a collection of functions to test for dependancies
 # Additionally some dependancies can be installed here
@@ -18,6 +20,16 @@ test_for_github_changelog_generator () {
     TEST=$(which github_changelog_generator 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
         log_term 0 "github_changelog_generator must be installed and on your path!"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+}
+
+test_for_hub () {
+    TEST=$(which hub 2>&1) 2> /dev/null
+    if [ $? != 0 ]; then
+        log_term 0 "hub must be installed and on your path!"
+        log_term 0 "See: https://hub.github.com/"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
@@ -62,7 +74,9 @@ test_for_rvm () {
 
 install_rvm (){
     gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
-    \curl -sSL https://get.rvm.io | bash -s stable
+    curl -sSL https://get.rvm.io | bash -s stable
+    # https://github.com/koalaman/shellcheck/wiki/SC1090
+    # shellcheck disable=SC1090
     source ~/.rvm/scripts/rvm
     rvm install 2.1.10
     rvm use 2.1

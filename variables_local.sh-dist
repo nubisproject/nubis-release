@@ -2,10 +2,10 @@
 
 # This file is for variables that are local to the user running the release
 
-# Path to the location of your git repositories
-# NOTE: This will be depricated in favor of clean checkouts
-NUBIS_PATH='/path/to/project/nubis'
-log_term 2 "NUBIS_PATH=${NUBIS_PATH}"
+# Path to the location to clone git repositories
+# Defaults to the location of "$0/.repositories" which is in .gitignore
+REPOSITORY_PATH="$(dirname "$(readlink -f "$0")")/.repositories"
+log_term 2 "REPOSITORY_PATH=${REPOSITORY_PATH}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # Your GitHub login (Where you fork Nubis repositories)
@@ -20,6 +20,6 @@ log_term 2 "PROFILE=${PROFILE}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # Your aws-vault command
-AWS_VAULT_COMMAND="aws-vault --backend=kwallet exec --assume-role-ttl=60m $PROFILE --"
-log_term 2 "AWS_VAULT_COMMAND=${AWS_VAULT_COMMAND}"
+declare -a AWS_VAULT_COMMAND=( 'aws-vault' '--backend=kwallet' 'exec' '--assume-role-ttl=60m' "${PROFILE}" '--' )
+log_term 2 "AWS_VAULT_COMMAND=${AWS_VAULT_COMMAND[*]}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
