@@ -129,7 +129,7 @@ build_and_release_all () {
     # This is a special edit to update the pinned version number to 'develop' for terraform modules in nubis-deploy
     #+ We need to do this only if we are building a vX.X.X-dev release (See _RELEASE_REGEX above)
     elif [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
-        edit_deploy_templates ${_RELEASE} 'develop'
+        edit_deploy_templates "${_RELEASE}" 'develop'
     fi
 
     # Upload assets for release
