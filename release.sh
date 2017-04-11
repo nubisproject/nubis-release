@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# TODO: If nubis-deploy terraform modules are pinned to master (not a version) they will not be caught by these regexes.
-#+ Change them to master for all *-dev release builds, detect master and change to release version on release
-#
-# TODO: upload_assets should check timestamp and not upload if there are no updates (improves speed)
-# TODO: Create docker container with all dependancies
-
 # Make sure we capture failures from pipe commands
 set -o pipefail
 # Required to trim characters
