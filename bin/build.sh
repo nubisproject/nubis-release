@@ -59,7 +59,6 @@ build_amis () {
     cd "${REPOSITORY_PATH}/${_REPOSITORY}" || exit 1
     OUTPUT=$(nubis-builder build --spot --instance-type c3.large | tee >(cat - >&5))
     if [ $? != '0' ]; then
-# Timeout waiting for SSH
         if [ "${NON_INTERACTIVE:-NULL}" == 'NULL' ]; then
             log_term 0 "Build for ${_REPOSITORY} failed. Contine? [y/N]"
             read -r CONTINUE
@@ -81,13 +80,20 @@ build_amis () {
 
     # nubis-builder outputs some build artifacts. Lets check them in here
     #+ unless we are on master or develop (assume these are test builds)
+    #+ If we are on develop and it is a dev build (vX.X.X-dev) check in also
     cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
     local _CURRENT_BRANCH; _CURRENT_BRANCH=$(git branch | cut -d' ' -f 2)
-    declare -a SKIP_BRANCHES=( 'master' 'develop' )
-    if [[ ! " ${SKIP_BRANCHES[@]} " =~ ${_CURRENT_BRANCH} ]]; then
+    local _SKIP_BRANCHES="^(master|develop)$"
+    local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
+    if [[ ! "${_CURRENT_BRANCH}" =~ ${_SKIP_BRANCHES} ]] || [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions "${_REPOSITORY}" 'develop' 'unset'
+        fi
         check_in_changes "${_REPOSITORY}" "Update builder artifacts for ${_RELEASE} release"
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions "${_REPOSITORY}" 'develop'
+        fi
     fi
-    unset SKIP_BRANCHES
 }
 
 build_and_release_all () {
@@ -109,6 +115,7 @@ build_and_release_all () {
     get_repositories
 
     # Release all non-infrastructure repositories
+    local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         local _COUNT=1
         for REPOSITORY in ${REPOSITORY_RELEASE_ARRAY[*]}; do
@@ -119,6 +126,10 @@ build_and_release_all () {
             let _COUNT=${_COUNT}+1
         done
         unset REPOSITORY _COUNT
+    # This is a special edit to update the pinned version number to 'develop' for terraform modules in nubis-deploy
+    #+ We need to do this only if we are building a vX.X.X-dev release (See _RELEASE_REGEX above)
+    elif [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
+        edit_deploy_templates ${_RELEASE} 'develop'
     fi
 
     # Upload assets for release
@@ -139,8 +150,8 @@ build_and_release_all () {
     aws-vault exec "${_VAULT_PROFILE}" -- aws ec2 describe-regions > /dev/null || exit 1
     unset _VAULT_PROFILE _VAULT_ACCOUNT
 
-    log_term 1 '\nIf you care to monitor the build progress:' -e
-    log_term 1 'tail -f logs/1/*/stdout logs/1/*/stderr'
+    log_term 0 '\nIf you care to monitor the build progress:' -e
+    log_term 0 'tail -f logs/1/*/stdout logs/1/*/stderr'
 
     # Build and release nubis-base
     # All other infrastructure builds are built from nubis-base, we need to build it first

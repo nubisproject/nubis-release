@@ -50,32 +50,49 @@ edit_project_json () {
 # This is a special edit to update the pinned version number to the current $RELEASE for the consul and vpc modules in nubis-deploy
 edit_deploy_templates () {
     local _RELEASE="${1}"
+    local _GIT_SHA="${2}"
+    local _REF
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
     fi
+    if [ "${_GIT_SHA:-NULL}" == 'NULL' ]; then
+        _REF="${_RELEASE}"
+    else
+        _REF="${_GIT_SHA}"
+    fi
+
 
     local _CONSUL_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/consul/main.tf"
     local _VPC_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/vpc/main.tf"
 
-    sed -i "s:nubis-consul//nubis/terraform/multi?ref=v[0-9].[0-9].[0-9]*:nubis-consul//nubis/terraform/multi?ref=${_RELEASE}:g" "${_CONSUL_FILE}"
+    # This matches a release (v1.3.0) a dev release (v1.3.0-dev) or master or develop
+    local _RELEASE_REGEX="\(\(v\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\(-dev\)\{0,1\}\)\|master\|develop\)"
 
-    sed -i "s:nubis-jumphost//nubis/terraform?ref=v[0-9].[0-9].[0-9]*:nubis-jumphost//nubis/terraform?ref=${_RELEASE}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-fluent-collector//nubis/terraform/multi?ref=v[0-9].[0-9].[0-9]*:nubis-fluent-collector//nubis/terraform/multi?ref=${_RELEASE}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-prometheus//nubis/terraform?ref=v[0-9].[0-9].[0-9]*:nubis-prometheus//nubis/terraform?ref=${_RELEASE}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-ci//nubis/terraform?ref=v[0-9].[0-9].[0-9]*:nubis-ci//nubis/terraform?ref=${_RELEASE}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-consul//nubis/terraform/multi?ref=${_RELEASE_REGEX}:nubis-consul//nubis/terraform/multi?ref=${_REF}:g" "${_CONSUL_FILE}"
+
+    sed -i "s:nubis-jumphost//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-jumphost//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-fluent-collector//nubis/terraform/multi?ref=${_RELEASE_REGEX}:nubis-fluent-collector//nubis/terraform/multi?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-prometheus//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-prometheus//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-ci//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-ci//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
 
     # Check in the edits
     #+ Unless we are on master or develop (assume these are test builds)
-    cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
     local _CURRENT_BRANCH; _CURRENT_BRANCH=$(git branch | cut -d' ' -f 2)
-    declare -a SKIP_BRANCHES=( 'master' 'develop' )
-    if [[ ! " ${SKIP_BRANCHES[@]} " =~ ${_CURRENT_BRANCH} ]]; then
+    local _SKIP_BRANCHES="^(master|develop)$"
+    local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
+    if [[ ! "${_CURRENT_BRANCH}" =~ ${_SKIP_BRANCHES} ]] || [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
+        cd "${REPOSITORY_PATH}"/'nubis-deploy' || exit 1
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions 'nubis-deploy' 'develop' 'unset'
+        fi
         check_in_changes 'nubis-deploy' "Update pinned release version for ${_RELEASE} release"
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions 'nubis-deploy' 'develop'
+        fi
     fi
-    unset SKIP_BRANCHES
 }
 
 # This function is depricated as nubis-builder is on its own release cadance now
