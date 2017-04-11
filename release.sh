@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# TODO: If nubis-deploy terraform modules are pinned to master (not a version) they will not be caught by these regexes.
-#+ Change them to master for all *-dev release builds, detect master and change to release version on release
-#
-# TODO: upload_assets should check timestamp and not upload if there are no updates (improves speed)
-# TODO: Create docker container with all dependancies
-# TODO: Update parallels to output logs to build specific directory
-
 # Make sure we capture failures from pipe commands
 set -o pipefail
 # Required to trim characters
@@ -304,7 +297,7 @@ while [ "$1" != "" ]; do
                 log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
                 $0 setup-release "${REPOSITORY}" "${RELEASE}"
-                if [ $? != '0' ]; then
+                if [ "${?}" != '0' ]; then
                     log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
                     log_term 0 "Aborting....."
                     exit 1
@@ -314,7 +307,7 @@ while [ "$1" != "" ]; do
             log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             $0 build "${REPOSITORY}" "${RELEASE}"
-            if [ $? != '0' ]; then
+            if [ "${?}" != '0' ]; then
                 log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
@@ -323,7 +316,7 @@ while [ "$1" != "" ]; do
             log_term 1 "\nReleasing repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             $0 complete-release "${REPOSITORY}" "${RELEASE}"
-            if [ $? != '0' ]; then
+            if [ "${?}" != '0' ]; then
                 log_term 0 "Release for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1

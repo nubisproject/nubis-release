@@ -623,7 +623,7 @@ EOH
     log_term 1 "\nSetting repository permissions for \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     # Set restrictions on the named branch to require pull-requests
-    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${DATA_BINARY}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection
+    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${DATA_BINARY}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
 }
 
 # Set up a repository for a release
@@ -733,15 +733,15 @@ repository_complete_release () {
     sleep 3
 
     # Check to see if we already have a release on GitHub
-    _RELEASE_ID=$(curl -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request GET https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/tags/"${_RELEASE}" | jq --raw-output .id)
+    _RELEASE_ID=$(curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request GET https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/tags/"${_RELEASE}" | jq --raw-output .id)
 
     # If we have a release we need to delete it before recreating it
     if [ "${_RELEASE_ID:-null}" != 'null' ]; then
-        curl -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/"${_RELEASE_ID}"
+        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/"${_RELEASE_ID}"
     fi
 
     # Now we can create the release
-    curl -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request POST --data "{\"tag_name\": \"${_RELEASE}\"}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases
+    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request POST --data "{\"tag_name\": \"${_RELEASE}\"}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases
 
     # Close release issue and milestone (if it exists and is open)
     local _ISSUE_TITLE="Tag ${_RELEASE} release"
@@ -750,7 +750,7 @@ repository_complete_release () {
     close_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_ISSUE_COMMENT}" "${_MILESTONE}"
 
     # Create pull-request to merge into develop
-    hub pull-request -m "Merge ${_RELEASE} release into develop. [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':develop' || exit 1
+    hub pull-request -m "Merge ${_RELEASE} release into develop. [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':develop' # || exit 1
 
     # Remove code review restriction from develop branch
     repository_set_permissions "${_REPOSITORY}" 'develop' 'unset'

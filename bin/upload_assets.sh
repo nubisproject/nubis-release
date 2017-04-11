@@ -96,9 +96,15 @@ upload_lambda_functions () {
     # push-lambda fetches dependancies and generates new zip files, check them in here
     #+ unless we are on master or develop (assume these are test builds)
     local _CURRENT_BRANCH; _CURRENT_BRANCH=$(git branch | cut -d' ' -f 2)
-    declare -a SKIP_BRANCHES=( 'master' 'develop' )
-    if [[ ! " ${SKIP_BRANCHES[@]} " =~ ${_CURRENT_BRANCH} ]]; then
+    local _SKIP_BRANCHES="^(master|develop)$"
+    local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
+    if [[ ! "${_CURRENT_BRANCH}" =~ ${_SKIP_BRANCHES} ]] || [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions "${_REPOSITORY}" 'develop' 'unset'
+        fi
         check_in_changes "${_REPOSITORY}" "Updated lambda function bundles for ${_RELEASE} release"
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions "${_REPOSITORY}" 'develop'
+        fi
     fi
-    unset SKIP_BRANCHES
 }
