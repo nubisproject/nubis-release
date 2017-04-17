@@ -249,9 +249,11 @@ while [ "$1" != "" ]; do
             GOT_COMMAND=1
         ;;
         upload-assets )
-            RELEASE="${2}"
+            shift
             source_files
-            upload_lambda_functions "${RELEASE}"
+            # This is treated as a sub command, so lets just pass through all the caller options
+            upload-assets "${@}"
+            shift ${#}
             GOT_COMMAND=1
         ;;
         build )

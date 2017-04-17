@@ -10,20 +10,30 @@ log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 # List of repositories that should be explicitly excluded form the release
 # It is not necessary to list anything here, only repositories explicitly listed in release or build arrays will be released
 # This is intended as a convenience to temporarily exclude repositories from a release, generally for testing
-declare -a EXCLUDE_REPOSITORIES=(nubis-accounts-nubis nubis-accounts-webops nubis-builder nubis-ha-nat nubis-junkheap nubis-mediawiki nubis-meta nubis-puppet-storage nubis-puppet-nat nubis-puppet-nsm nubis-puppet-mig nubis-puppet-eip nubis-puppet-discovery nubis-puppet-consul_do nubis-puppet-configuration nubis-puppet-envconsul nubis-puppet-consul-replicate nubis-storage nubis-vpc )
+declare -a EXCLUDE_REPOSITORIES=( 'nubis-accounts-nubis' 'nubis-accounts-webops' 'nubis-builder' 'nubis-ha-nat' 'nubis-junkheap' 'nubis-mediawiki' 'nubis-meta' 'nubis-puppet-storage' 'nubis-puppet-nat' 'nubis-puppet-nsm' 'nubis-puppet-mig' 'nubis-puppet-eip' 'nubis-puppet-discovery' 'nubis-puppet-consul_do' 'nubis-puppet-configuration' 'nubis-puppet-envconsul' 'nubis-puppet-consul-replicate' 'nubis-storage' 'nubis-vpc' )
 log_term 3 "EXCLUDE_REPOSITORIES=${EXCLUDE_REPOSITORIES[*]}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # List of repositories that will be released for the release which do not require an AMI build
 # It is not necessary to include repositories here that will be built, they are automatically released
-declare -a RELEASE_REPOSITORIES=( nubis-bastionsshkey nubis-deploy nubis-docs nubisproject.github.io nubis-stacks nubis-terraform )
+declare -a RELEASE_REPOSITORIES=( 'nubis-bastionsshkey' 'nubis-deploy nubis-docs' 'nubisproject.github.io' 'nubis-terraform' )
 log_term 3 "RELEASE_REPOSITORIES=${RELEASE_REPOSITORIES[*]}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # List of repositories that need to be built from nubis-base and released during a release
 # nubis-base is always built and does not need to be specifyed here
-declare -a BUILD_REPOSITORIES=( nubis-ci nubis-consul nubis-db-admin nubis-dpaste nubis-fluent-collector nubis-jumphost nubis-nat nubis-prometheus nubis-skel )
+declare -a BUILD_REPOSITORIES=( 'nubis-ci' 'nubis-consul' 'nubis-db-admin' 'nubis-dpaste' 'nubis-fluent-collector' 'nubis-jumphost' 'nubis-nat' 'nubis-prometheus' 'nubis-skel' )
 log_term 3 "BUILD_REPOSITORIES=${BUILD_REPOSITORIES[*]}"
+log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+# List of lambda functions that need to be built and released during a release
+declare -a LAMBDA_FUNCTIONS=( 'nubis-lambda-user-management' 'nubis-lambda-uuid' )
+log_term 3 "LAMBDA_FUNCTIONS=${LAMBDA_FUNCTIONS[*]}"
+log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+# The name of the S3 bucket to upload assets (lambda functions) to
+S3_BUCKET='nubis-stacks'
+log_term 3 "S3_BUCKET=${S3_BUCKET}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # Dates for this release. This is only used for generating the list of issues which were closed during this time window

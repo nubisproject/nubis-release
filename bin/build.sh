@@ -114,6 +114,29 @@ build_and_release_all () {
     # Sets: ${REPOSITORY_LIST_ARRAY[*]} ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]}  ${REPOSITORY_EXCLUDE_ARRAY[*]}
     get_repositories
 
+    # Bundle, Upload and Release all lambda functions
+    if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
+        local _COUNT=1
+        for LAMBDA_FUNCTION in "${_LAMBDA_LIST[@]}"; do
+            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
+                log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#_LAMBDA_LIST[*]})" -e
+                log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                $0 setup-release "${LAMBDA_FUNCTION}" "${_RELEASE}"
+            fi
+
+            log_term 1 "\nUploading Lambda function:: \"${LAMBDA_FUNCTION}\"" -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            "$0" upload-assets --multi-region --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}"
+
+            log_term 1 "\nComplete releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#_LAMBDA_LIST[*]})" -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            "$0" complete-release "${LAMBDA_FUNCTION}" "${_RELEASE}"
+            RELEASED_REPOSITORIES+=( "${LAMBDA_FUNCTION}" )
+            let _COUNT=${_COUNT}+1
+        done
+        unset LAMBDA_FUNCTION _COUNT
+    fi
+
     # Release all non-infrastructure repositories
     local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
@@ -131,13 +154,6 @@ build_and_release_all () {
     elif [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
         edit_deploy_templates "${_RELEASE}" 'develop'
     fi
-
-    # Upload assets for release
-    # This needs to hapen after the above repositories are released
-    #+ as it fetches the latest nubis-stacks release
-    log_term 1 "\nUploading assets for release: \"${_RELEASE}\"" -e
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    "$0" upload-assets "${_RELEASE}"
 
     # Hack for aws-vault as server mode seems broken on Ubuntu
     # Expire any sessions for the build account and generate a new session

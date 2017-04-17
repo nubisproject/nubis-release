@@ -9,7 +9,7 @@
 test_for_ghi () {
     TEST=$(which ghi 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
-        log_term 0 "ghi must be installed and on your path!"
+        log_term 0 "ERROR: ghi must be installed and on your path!"
         log_term 0 "See: https://github.com/stephencelis/ghi"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
@@ -19,7 +19,7 @@ test_for_ghi () {
 test_for_github_changelog_generator () {
     TEST=$(which github_changelog_generator 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
-        log_term 0 "github_changelog_generator must be installed and on your path!"
+        log_term 0 "ERROR: github_changelog_generator must be installed and on your path!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
@@ -28,7 +28,7 @@ test_for_github_changelog_generator () {
 test_for_hub () {
     TEST=$(which hub 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
-        log_term 0 "hub must be installed and on your path!"
+        log_term 0 "ERROR: hub must be installed and on your path!"
         log_term 0 "See: https://hub.github.com/"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
@@ -38,7 +38,17 @@ test_for_hub () {
 test_for_jq () {
     TEST=$(which jq 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
-        log_term 0 "jq must be installed and on your path!"
+        log_term 0 "ERROR: jq must be installed and on your path!"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+}
+
+test_for_npm () {
+    TEST=$(which npm 2>&1) 2> /dev/null
+    if [ $? != 0 ]; then
+        log_term 0 "ERROR: npm must be installed and on your path!"
+        log_term 0 "See: https://www.npmjs.com/get-npm"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
@@ -47,7 +57,7 @@ test_for_jq () {
 test_for_nubis_builder () {
     TEST=$(which nubis-builder 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
-        log_term 0 "nubis-builder must be installed and on your path!"
+        log_term 0 "ERROR: nubis-builder must be installed and on your path!"
         log_term 0 "See: https://github.com/Nubisproject/nubis-builder#builder-quick-start"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
@@ -57,7 +67,7 @@ test_for_nubis_builder () {
 test_for_parallel () {
     TEST=$(which parallel 2>&1) 2> /dev/null
     if [ $? != 0 ]; then
-        log_term 0 "parallel must be installed and on your path!"
+        log_term 0 "ERROR: parallel must be installed and on your path!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
