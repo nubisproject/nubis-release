@@ -161,7 +161,7 @@ push-lambda () {
         zip-lambda "${LAMBDA_FUNCTION}"
 
         # Push the lambda function zip file to the S3 bucket
-        push-files "${REPOSITORY_PATH}/${LAMBDA_FUNCTION}/bundles/${LAMBDA_FUNCTION}.zip" "${_RELEASE}" "${_S3_BUCKET}" "${_S3_MULTI_REGION}"
+        push-files "${REPOSITORY_PATH}/${LAMBDA_FUNCTION}/bundles/${LAMBDA_FUNCTION}.zip" "${_RELEASE}/lambda" "${_S3_BUCKET}" "${_S3_MULTI_REGION}"
 
         # update-lambda-dependencies fetches dependancies and zip-lambda generates
         #+  new zip file, check them in here unless we are on master or develop
