@@ -719,7 +719,7 @@ repository_complete_release () {
     hub pull-request -m "Update CHANGELOG for ${_RELEASE} release [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':master' || exit 1
 
     # Switch to the master branch, merge the pull-request and then tag the release
-    log_term 1 "\nMerging release into master brnach for \"${_REPOSITORY}\"." -e
+    log_term 1 "\nMerging release into master branch for \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     git checkout master || exit 1
     git pull || exit 1
@@ -756,7 +756,7 @@ repository_complete_release () {
     repository_set_permissions "${_REPOSITORY}" 'develop' 'unset'
 
     # Switch to the develop branch and merge the pull-request
-    log_term 1 "\nMerging release into develop brnach for \"${_REPOSITORY}\"." -e
+    log_term 1 "\nMerging release into develop branch for \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     git checkout develop || exit 1
     git pull || exit 1
