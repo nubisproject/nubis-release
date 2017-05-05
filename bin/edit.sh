@@ -64,6 +64,7 @@ edit_deploy_templates () {
         _REF="${_GIT_SHA}"
     fi
 
+    ENTRY_PWD=$(pwd)
 
     local _CONSUL_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/consul/main.tf"
     local _VPC_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/vpc/main.tf"
@@ -93,6 +94,7 @@ edit_deploy_templates () {
             repository_set_permissions 'nubis-deploy' 'develop'
         fi
     fi
+    cd "${ENTRY_PWD}" || exit 0
 }
 
 # This function is depricated as nubis-builder is on its own release cadance now
