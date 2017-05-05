@@ -117,6 +117,8 @@ build_and_release_all () {
     # Bundle, Upload and Release all lambda functions
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         local _COUNT=1
+        # https://github.com/koalaman/shellcheck/wiki/SC2153
+        # shellcheck disable=SC2153
         for LAMBDA_FUNCTION in "${LAMBDA_FUNCTIONS[@]}"; do
             if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
                 log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
@@ -270,7 +272,7 @@ clone_all_repositories () {
     for REPOSITORY in ${REPOSITORY_ALL_RELEASE_ARRAY[*]}; do
         log_term 1 "\nCloning repository \"${REPOSITORY}\". (${_COUNT} of ${#REPOSITORY_RELEASE_ARRAY[*]})" -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        clone_repository ${REPOSITORY}
+        clone_repository "${REPOSITORY}"
         let _COUNT=${_COUNT}+1
     done
     unset REPOSITORY_ALL_RELEASE_ARRAY REPOSITORY _COUNT
