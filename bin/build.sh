@@ -117,9 +117,11 @@ build_and_release_all () {
     # Bundle, Upload and Release all lambda functions
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         local _COUNT=1
-        for LAMBDA_FUNCTION in "${_LAMBDA_LIST[@]}"; do
+        # https://github.com/koalaman/shellcheck/wiki/SC2153
+        # shellcheck disable=SC2153
+        for LAMBDA_FUNCTION in "${LAMBDA_FUNCTIONS[@]}"; do
             if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
-                log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#_LAMBDA_LIST[*]})" -e
+                log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
                 $0 setup-release "${LAMBDA_FUNCTION}" "${_RELEASE}"
             fi
@@ -128,7 +130,7 @@ build_and_release_all () {
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             "$0" upload-assets --multi-region --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}"
 
-            log_term 1 "\nComplete releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#_LAMBDA_LIST[*]})" -e
+            log_term 1 "\nComplete releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             "$0" complete-release "${LAMBDA_FUNCTION}" "${_RELEASE}"
             RELEASED_REPOSITORIES+=( "${LAMBDA_FUNCTION}" )
@@ -174,7 +176,7 @@ build_and_release_all () {
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         log_term 1 "\nBuild and Release \"nubis-base\" at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build-and-release '{1}' "${_RELEASE}"  "${_SKIP_SETUP}" ::: 'nubis-base'
+        parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build-and-release '{1}' "${_RELEASE}" "${_SKIP_SETUP}" ::: 'nubis-base'
         if [ $? != '0' ]; then
             log_term 0 "Build for 'nubis-base' failed. Unable to continue."
             log_term 0 "Aborting....."
@@ -185,7 +187,7 @@ build_and_release_all () {
     else
         log_term 1 "\nBuild \"nubis-base\" at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build '{1}' "${_RELEASE}" ::: 'nubis-base'
+        parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build '{1}' "${_RELEASE}" "${_SKIP_SETUP}" ::: 'nubis-base'
         if [ $? != '0' ]; then
             log_term 0 "Build for 'nubis-base' failed. Unable to continue."
             log_term 0 "Aborting....."
@@ -227,7 +229,6 @@ build_and_release_all () {
 }
 
 patch_release_setup () {
-    test_for_parallel
     local _RELEASE="${1}"
     local _GIT_REF="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
@@ -248,7 +249,7 @@ patch_release_setup () {
 
     # Clone all relevant repositories
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
-        declare -a REPOSITORY_ALL_RELEASE_ARRAY=( ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]} )
+        declare -a REPOSITORY_ALL_RELEASE_ARRAY=( 'nubis-base' ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]} ${_LAMBDA_LIST[*]} )
         local _COUNT=1
         for REPOSITORY in ${REPOSITORY_ALL_RELEASE_ARRAY[*]}; do
             log_term 1 "\nCloning repository \"${REPOSITORY}\" for \"${_RELEASE}\" at \"${_GIT_REF}\". (${_COUNT} of ${#REPOSITORY_RELEASE_ARRAY[*]})" -e
@@ -258,4 +259,21 @@ patch_release_setup () {
         done
         unset REPOSITORY_ALL_RELEASE_ARRAY REPOSITORY _COUNT
     fi
+}
+
+clone_all_repositories () {
+    # Get list of repositories
+    # Sets: ${REPOSITORY_LIST_ARRAY[*]} ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]}  ${REPOSITORY_EXCLUDE_ARRAY[*]}
+    get_repositories
+
+    # Clone all relevant repositories
+    declare -a REPOSITORY_ALL_RELEASE_ARRAY=( 'nubis-base' ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]} ${_LAMBDA_LIST[*]} )
+    local _COUNT=1
+    for REPOSITORY in ${REPOSITORY_ALL_RELEASE_ARRAY[*]}; do
+        log_term 1 "\nCloning repository \"${REPOSITORY}\". (${_COUNT} of ${#REPOSITORY_RELEASE_ARRAY[*]})" -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        clone_repository "${REPOSITORY}"
+        let _COUNT=${_COUNT}+1
+    done
+    unset REPOSITORY_ALL_RELEASE_ARRAY REPOSITORY _COUNT
 }

@@ -586,7 +586,13 @@ repository_set_permissions () {
   "required_pull_request_reviews": {
     "include_admins": true
   },
-  "required_status_checks": null,
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "continuous-integration/travis-ci"
+    ]
+  },
+  "enforce_admins": true,
   "restrictions": null
 }
 EOH
@@ -600,6 +606,7 @@ EOH
 {
   "required_pull_request_reviews": null,
   "required_status_checks": null,
+  "enforce_admins": true,
   "restrictions": {
     "users": [
     ],
@@ -718,12 +725,50 @@ repository_complete_release () {
     local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${_REPOSITORY}" 'close')
     hub pull-request -m "Update CHANGELOG for ${_RELEASE} release [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':master' || exit 1
 
+    # Remove code review restriction from master branch
+    repository_set_permissions "${_REPOSITORY}" 'master' 'unset'
+
     # Switch to the master branch, merge the pull-request and then tag the release
     log_term 1 "\nMerging release into master branch for \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     git checkout master || exit 1
     git pull || exit 1
-    git merge --no-ff -m "Merge release branch into master [skip ci]" "release-${_RELEASE}" || exit 1
+    OUTPUT=$(git merge --no-ff -m "Merge release branch into master [skip ci]" "release-${_RELEASE}")
+    # If we are doing a patch release we will get some merge conflicts, lets
+    #+ attempt to resolve them automatically.
+    # We start by aborting the above attempted merge (resetting files) so we do
+    #+ not need to edit the merge conflicts manually.
+    # Then we retry the merge with the '--strategy recursive -X theirs' options
+    #+ to force our merge to win.
+    # There is a small risk to this as we may unintentionally blow away future
+    #+ (past the base release point) changes on the 'master' branch.
+    # Due to the risk, we will be very perscrptive about the files we will allow
+    #+ conflicts in and still go ahead with the change.
+    # This should limit the damage to known locations.
+    if [ "${?}" != '0' ]; then
+        log_term 0 'ERROR: Got conflict merging into master. Attempting to recover...'
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        # In any repository we run a risk of errors in the changelog due to the
+        #+ way github_changelog_generator reorders issues on subesequent runs
+        # I (jd) have decided that I do not care enough about the changelog to
+        #+ manually resolve merge conflicts in it
+        # Lets simply take the most recent version and treat it as correct.
+        # As it is a changelog there is zero risk for breaking deployments with
+        #+ this strategy as we do not progromatically rely on the changelog.
+        #
+        # Make sure we only have only one conflict
+        if [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '1' ]; then
+            # Make sure the conflict is in the changelog file
+            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
+                    git merge --abort || exit 1
+                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into master [skip ci]" "release-${_RELEASE}" || exit 1
+            fi
+        else
+            log_term 0 'ERROR: Unable to repair merge conflict. Aborting build.'
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit 1
+        fi
+    fi
     git push origin HEAD:master || exit 1
     log_term 1 "\nTaging release for \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -749,6 +794,9 @@ repository_complete_release () {
     local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${_REPOSITORY}" 'close')
     close_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_ISSUE_COMMENT}" "${_MILESTONE}"
 
+    # Replace code review restriction on master branch
+    repository_set_permissions "${_REPOSITORY}" 'master'
+
     # Create pull-request to merge into develop
     hub pull-request -m "Merge ${_RELEASE} release into develop. [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':develop' # || exit 1
 
@@ -760,7 +808,80 @@ repository_complete_release () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     git checkout develop || exit 1
     git pull || exit 1
-    git merge --no-ff -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
+    OUTPUT=$(git merge --no-ff -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}")
+    # If we are doing a patch release we will get some merge conflicts, lets
+    #+ attempt to resolve them automatically.
+    # We start by aborting the above attempted merge (resetting files) so we do
+    #+ not need to edit the merge conflicts manually.
+    # Then we retry the merge with the '--strategy recursive -X theirs' options
+    #+ to force our merge to win.
+    # There is a small risk to this as we may unintentionally blow away future
+    #+ (past the base release point) changes on the 'develop' branch.
+    # Due to the risk, we will be very perscrptive about the files we will allow
+    #+ conflicts in and still go ahead with the change.
+    # This should limit the damage to known locations.
+    if [ "${?}" != '0' ]; then
+        log_term 0 'ERROR: Got conflict merging into develop Attempting to recover...'
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        # We will always get a merge conflict on nubis-deploy during a patch
+        #+ release.
+        # This is due to the fact that we update the pinned terraform modules to
+        #+ 'develop' after a release on the 'develop' branch.
+        # When we base our release from a previous release it is older in
+        #+ history and will not contain the 'develop' change.
+        # We then create a release branch (from the older start point) and edit
+        #+ the pinned Terraform modules to the current patch release.
+        # This creates a merge conflict when attempting to merge back into the
+        #+ 'develop' branch.
+        # In this case, we test to make sure the conflict occoured in the known
+        #+ files. If so we select our file as the authoritative one.
+        # There should be little risk to this strategy as we are passing -X ours
+        #+ to the 'recursive' stratagy, which should only affect the few lines
+        #+ in question.
+        #
+        if [ "${_REPOSITORY}" == 'nubis-deploy' ]; then
+            # Make sure we have exactly two conflicts
+            if [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '2' ]; then
+                if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/consul/main.tf')" == '1' ] \
+                && [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/vpc/main.tf')" == '1' ]; then
+                    git merge --abort || exit 1
+                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
+                fi
+            # Lets see if we also got bit by the changelog
+            elif [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '3' ]; then
+                if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/consul/main.tf')" == '1' ] \
+                && [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/vpc/main.tf')" == '1' ] \
+                && [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
+                    git merge --abort || exit 1
+                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
+                fi
+            fi
+        # In any repository we run a risk of errors in the changelog due to the
+        #+ way github_changelog_generator reorders issues on subesequent runs
+        # I (jd) have decided that I do not care enough about the changelog to
+        #+ manually resolve merge conflicts in it
+        # Lets simply take the most recent version and treat it as correct.
+        # As it is a changelog there is zero risk for breaking deployments with
+        #+ this strategy as we do not progromatically rely on the changelog.
+        #
+        # Make sure we only have only one conflict
+        elif [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '1' ]; then
+            # Make sure the conflict is in the changelog file
+            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
+                git merge --abort || exit 1
+                git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
+            fi
+            # Make sure the conflict is in the nubis/builder/project.json file
+            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'nubis/builder/project.json')" == '1' ]; then
+                git merge --abort || exit 1
+                git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
+            fi
+        else
+            log_term 0 'ERROR: Unable to repair merge conflict. Aborting build.'
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit 1
+        fi
+    fi
     git push origin HEAD:develop || exit 1
 
     # Replace code review restriction on develop branch

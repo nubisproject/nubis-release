@@ -77,13 +77,13 @@ push-files () {
             log_term 2 "Got BUCKET_REGION: ${_BUCKET_REGION}"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             if [ "${_BUCKET_REGION:-null}" != "null" ]; then
-                _BUCKET_REGION_ARGS="--region ${_BUCKET_REGION}"
+                _BUCKET_REGION_ARGS=( "--region" "${_BUCKET_REGION}" )
             fi
 
             log_term 0 " - Uploading to ${BUCKET}: " -n
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
-            _OUT=$("${AWS_VAULT_COMMAND[@]}" "aws ${_BUCKET_REGION_ARGS} s3api put-object --bucket ${BUCKET} --acl public-read --content-md5 ${_MD5} --content-type ${_CONTENT_TYPE} --key ${_S3_PATH}/${_FILENAME} --body ${_FILENAME}" 2>&1) 2> /dev/null
+            _OUT=$("${AWS_VAULT_COMMAND[@]}" aws "${_BUCKET_REGION_ARGS[@]}" s3api put-object --bucket "${BUCKET}" --acl public-read --content-md5 "${_MD5}" --content-type "${_CONTENT_TYPE}" --key "${_S3_PATH}/${_FILENAME}" --body "${_FILENAME}" 2>&1) 2> /dev/null
             if [ "${?}" != '0' ]; then
                 log_term 0 "ERROR\n\n${_OUT}" -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"

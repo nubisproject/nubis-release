@@ -236,6 +236,11 @@ while [ "$1" != "" ]; do
             echo -en "                                Basically set -x\n\n"
             exit 0
         ;;
+        clone-all-repositories )
+            source_files
+            clone_all_repositories
+            GOT_COMMAND=1
+        ;;
         create-milestones )
             RELEASE="${2}"
             source_files
@@ -347,7 +352,7 @@ while [ "$1" != "" ]; do
         patch-release-complete )
             RELEASE="${2}"
             source_files
-            build_and_release_all "${RELEASE}" 'skip-setup'
+            build_and_release_all "${RELEASE}" 'NULL' 'skip-setup'
             GOT_COMMAND=1
         ;;
         generate-csv )
