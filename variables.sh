@@ -22,7 +22,7 @@ log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # List of repositories that need to be built from nubis-base and released during a release
 # nubis-base is always built and does not need to be specifyed here
-declare -a BUILD_REPOSITORIES=( 'nubis-ci' 'nubis-consul' 'nubis-db-admin' 'nubis-dpaste' 'nubis-fluent-collector' 'nubis-jumphost' 'nubis-nat' 'nubis-prometheus' 'nubis-skel' )
+declare -a BUILD_REPOSITORIES=( 'nubis-ci' 'nubis-consul' 'nubis-db-admin' 'nubis-dpaste' 'nubis-fluent-collector' 'nubis-jumphost' 'nubis-nat' 'nubis-prometheus' 'nubis-skel' 'nubis-sso' )
 log_term 3 "BUILD_REPOSITORIES=${BUILD_REPOSITORIES[*]}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
