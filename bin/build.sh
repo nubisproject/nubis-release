@@ -16,7 +16,7 @@ clean_librarian_puppet () {
         log_term 1 "Cleaning librarian-puppet files..."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exec 5>&1
-        OUTPUT=$(cd "${REPOSITORY_PATH}/${_REPOSITORY}" && librarian-puppet clean | tee >(cat - >&5))
+        OUTPUT=$(cd "${REPOSITORY_PATH}/${_REPOSITORY}/nubis" && librarian-puppet clean | tee >(cat - >&5))
         if [ -f "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile.lock" ]; then
             OUTPUT=$(rm "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile.lock" | tee >(cat - >&5))
         fi
