@@ -100,7 +100,7 @@ instructions () {
     echo "$0 generate-csv"
     echo "Create a release presentation and export the pdf to be added to the nubis-docs/presentations folder:"
     echo "https://docs.google.com/a/mozilla.com/presentation/d/1IEyH3eDbAha1eFCfeDtHryME-1-2xeGcSgOy1HJmVgc/edit?usp=sharing"
-    echo "$0 get-release-stats"
+    echo "$0 --get-release-stats"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
     echo "RELEASE='v1.X.0' # For the next release"

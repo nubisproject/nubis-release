@@ -16,7 +16,7 @@ log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # List of repositories that will be released for the release which do not require an AMI build
 # It is not necessary to include repositories here that will be built, they are automatically released
-declare -a RELEASE_REPOSITORIES=( 'nubis-bastionsshkey' 'nubis-deploy nubis-docs' 'nubisproject.github.io' 'nubis-terraform' )
+declare -a RELEASE_REPOSITORIES=( 'nubis-bastionsshkey' 'nubis-deploy' 'nubis-docs' 'nubisproject.github.io' 'nubis-terraform' )
 log_term 3 "RELEASE_REPOSITORIES=${RELEASE_REPOSITORIES[*]}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
@@ -37,7 +37,7 @@ log_term 3 "S3_BUCKET=${S3_BUCKET}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
 # Dates for this release. This is only used for generating the list of issues which were closed during this time window
-RELEASE_DATES="2016-12-21..2017-03-24"
+RELEASE_DATES="2017-03-24..2017-06-24"
 log_term 3 "RELEASE_DATES=${RELEASE_DATES}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
