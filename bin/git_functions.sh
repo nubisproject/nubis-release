@@ -798,7 +798,7 @@ repository_complete_release () {
     repository_set_permissions "${_REPOSITORY}" 'master'
 
     # Create pull-request to merge into develop
-    hub pull-request -m "Merge ${_RELEASE} release into develop. [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':develop' # || exit 1
+    hub pull-request -m "Merge ${_RELEASE} release into develop. [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":master" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':develop' # || exit 1
 
     # Remove code review restriction from develop branch
     repository_set_permissions "${_REPOSITORY}" 'develop' 'unset'
@@ -808,7 +808,7 @@ repository_complete_release () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     git checkout develop || exit 1
     git pull || exit 1
-    OUTPUT=$(git merge --no-ff -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}")
+    OUTPUT=$(git merge --no-ff -m "Merge release into develop [skip ci]" "master")
     # If we are doing a patch release we will get some merge conflicts, lets
     #+ attempt to resolve them automatically.
     # We start by aborting the above attempted merge (resetting files) so we do
