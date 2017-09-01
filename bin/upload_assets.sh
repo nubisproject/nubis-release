@@ -109,8 +109,7 @@ update-lambda-dependencies () {
     log_term 0 "Updating dependencies for lambda: ${_LAMBDA_FUNCTION}"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     cd "${REPOSITORY_PATH}"/"${LAMBDA_FUNCTION}" || exit 1
-    npm update 2 > /dev/null
-    if [ "${?}" != '0' ]; then
+    if [ "$(npm update 2 > /dev/null)" != '0' ]; then
         log_term 0 "ERROR: 'npm update' failed for lambda function ${_LAMBDA_FUNCTION}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1

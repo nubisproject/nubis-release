@@ -58,6 +58,8 @@ build_amis () {
     exec 5>&1
     cd "${REPOSITORY_PATH}/${_REPOSITORY}" || exit 1
     OUTPUT=$(nubis-builder build --spot --instance-type c3.large | tee >(cat - >&5))
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ $? != '0' ]; then
         if [ "${NON_INTERACTIVE:-NULL}" == 'NULL' ]; then
             log_term 0 "Build for ${_REPOSITORY} failed. Contine? [y/N]"
@@ -177,6 +179,8 @@ build_and_release_all () {
         log_term 1 "\nBuild and Release \"nubis-base\" at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build-and-release '{1}' "${_RELEASE}" "${_SKIP_SETUP}" ::: 'nubis-base'
+        # https://github.com/koalaman/shellcheck/wiki/SC2181
+        # shellcheck disable=SC2181
         if [ $? != '0' ]; then
             log_term 0 "Build for 'nubis-base' failed. Unable to continue."
             log_term 0 "Aborting....."
@@ -188,6 +192,8 @@ build_and_release_all () {
         log_term 1 "\nBuild \"nubis-base\" at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build '{1}' "${_RELEASE}" "${_SKIP_SETUP}" ::: 'nubis-base'
+        # https://github.com/koalaman/shellcheck/wiki/SC2181
+        # shellcheck disable=SC2181
         if [ $? != '0' ]; then
             log_term 0 "Build for 'nubis-base' failed. Unable to continue."
             log_term 0 "Aborting....."
