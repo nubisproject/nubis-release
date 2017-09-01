@@ -303,8 +303,7 @@ while [ "$1" != "" ]; do
                 # Set up release
                 log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                $0 setup-release "${REPOSITORY}" "${RELEASE}"
-                if [ "${?}" != '0' ]; then
+                if [ "$($0 setup-release "${REPOSITORY}" "${RELEASE}")" != '0' ]; then
                     log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
                     log_term 0 "Aborting....."
                     exit 1
@@ -313,8 +312,7 @@ while [ "$1" != "" ]; do
             # Build the AMI
             log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            $0 build "${REPOSITORY}" "${RELEASE}"
-            if [ "${?}" != '0' ]; then
+            if [ "$($0 build "${REPOSITORY}" "${RELEASE}")" != '0' ]; then
                 log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
@@ -322,8 +320,7 @@ while [ "$1" != "" ]; do
             # Release repository
             log_term 1 "\nReleasing repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            $0 complete-release "${REPOSITORY}" "${RELEASE}"
-            if [ "${?}" != '0' ]; then
+            if [ "$($0 complete-release "${REPOSITORY}" "${RELEASE}")" != '0' ]; then
                 log_term 0 "Release for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1

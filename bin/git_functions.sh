@@ -202,10 +202,14 @@ get_repositories () {
 
     # Set up REPOSITORY_BUILD_ARRAY REPOSITORY_RELEASE_ARRAY REPOSITORY_EXCLUDE_ARRAY
     for REPOSITORY in ${REPOSITORY_LIST_ARRAY[*]}; do
+        # https://github.com/koalaman/shellcheck/wiki/SC2199
+        # shellcheck disable=SC2199
         if [[ " ${BUILD_REPOSITORIES[@]} " =~ ${REPOSITORY} ]] && [[ ! " ${EXCLUDE_REPOSITORIES[@]} " =~ ${REPOSITORY} ]]; then
             log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_BUILD_ARRAY."
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             REPOSITORY_BUILD_ARRAY=( ${REPOSITORY_BUILD_ARRAY[*]} ${REPOSITORY} )
+        # https://github.com/koalaman/shellcheck/wiki/SC2199
+        # shellcheck disable=SC2199
         elif [[ " ${RELEASE_REPOSITORIES[@]} " =~ ${REPOSITORY} ]] && [[ ! " ${EXCLUDE_REPOSITORIES[@]} " =~ ${REPOSITORY} ]]; then
             log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_RELEASE_ARRAY."
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -516,6 +520,8 @@ file_issue () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     # We do not need multiple release issues
     _ISSUE_EXISTS=$(get_release_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_MILESTONE}")
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ $? == 0 ]; then
         log_term 2 "Release issue exists. Returned: '${_ISSUE_EXISTS}'. Skipping 'file_issue'."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -536,6 +542,8 @@ close_issue () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     # Check to see if an issue exists for us to close
     _ISSUE_NUMBER=$(get_release_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_MILESTONE}")
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ $? != 0 ]; then
         log_term 1 "Warning: 'get_release_issue' returned: '${_ISSUE_NUMBER}'. Skipping 'close_issue'."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -745,6 +753,8 @@ repository_complete_release () {
     # Due to the risk, we will be very perscrptive about the files we will allow
     #+ conflicts in and still go ahead with the change.
     # This should limit the damage to known locations.
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ "${?}" != '0' ]; then
         log_term 0 'ERROR: Got conflict merging into master. Attempting to recover...'
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -820,6 +830,8 @@ repository_complete_release () {
     # Due to the risk, we will be very perscrptive about the files we will allow
     #+ conflicts in and still go ahead with the change.
     # This should limit the damage to known locations.
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ "${?}" != '0' ]; then
         log_term 0 'ERROR: Got conflict merging into develop Attempting to recover...'
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
