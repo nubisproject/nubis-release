@@ -30,6 +30,8 @@ push-files () {
             _AWS_DEFAULT_REGION='us-west-2'
         fi
         _S3_BUCKET_REGIONS=$("${AWS_VAULT_COMMAND[@]}" aws --region "${_AWS_DEFAULT_REGION}" ec2 describe-regions --query 'Regions[].{Name:RegionName}' --output text | sort)
+        # https://github.com/koalaman/shellcheck/wiki/SC2181
+        # shellcheck disable=SC2181
         if [ "${?}" != '0' ]; then
             log_term 0 "ERROR: AWS region lookup failed"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -84,6 +86,8 @@ push-files () {
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
             _OUT=$("${AWS_VAULT_COMMAND[@]}" aws "${_BUCKET_REGION_ARGS[@]}" s3api put-object --bucket "${BUCKET}" --acl public-read --content-md5 "${_MD5}" --content-type "${_CONTENT_TYPE}" --key "${_S3_PATH}/${_FILENAME}" --body "${_FILENAME}" 2>&1) 2> /dev/null
+            # https://github.com/koalaman/shellcheck/wiki/SC2181
+            # shellcheck disable=SC2181
             if [ "${?}" != '0' ]; then
                 log_term 0 "ERROR\n\n${_OUT}" -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -105,8 +109,7 @@ update-lambda-dependencies () {
     log_term 0 "Updating dependencies for lambda: ${_LAMBDA_FUNCTION}"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     cd "${REPOSITORY_PATH}"/"${LAMBDA_FUNCTION}" || exit 1
-    npm update 2 > /dev/null
-    if [ "${?}" != '0' ]; then
+    if [ "$(npm update 2 > /dev/null)" != '0' ]; then
         log_term 0 "ERROR: 'npm update' failed for lambda function ${_LAMBDA_FUNCTION}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
@@ -119,6 +122,8 @@ zip-lambda () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     cd "${REPOSITORY_PATH}"/"${LAMBDA_FUNCTION}" || exit 1
     zip --quiet --recurse-paths "bundles/${_LAMBDA_FUNCTION}.zip" ./* --exclude bundles/
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ "${?}" != '0' ]; then
         log_term 0 "ERROR: 'zip' failed for lambda function ${_LAMBDA_FUNCTION}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
