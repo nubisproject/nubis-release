@@ -206,7 +206,7 @@ get_repositories () {
             log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_BUILD_ARRAY."
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             REPOSITORY_BUILD_ARRAY=( ${REPOSITORY_BUILD_ARRAY[*]} ${REPOSITORY} )
-        elif [[ "${REPOSITORY}" =~ (${RELEASE_REPOSITORIES}) ]] && [[ ! "${REPOSITORY}" =~ (${EXCLUDE_REPOSITORIES[@]}) ]]; then
+        elif [[ "${REPOSITORY}" =~ (${RELEASE_REPOSITORIES}) ]] && [[ ! "${REPOSITORY}" =~ (${EXCLUDE_REPOSITORIES}) ]]; then
             log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_RELEASE_ARRAY."
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             REPOSITORY_RELEASE_ARRAY=( ${REPOSITORY_RELEASE_ARRAY[*]} ${REPOSITORY} )
@@ -585,7 +585,7 @@ repository_set_permissions () {
     #+ Require code reviews, includig owners
     #+ Disable checks
     #+ Disable users and teams restrictions
-    REQUIRE_PULL_REQUEST_REVIEW=$(cat <<EOH
+    UPDATE_BRANCH_PROTECTION=$(cat <<EOH
 {
   "required_status_checks": {
     "strict": true,
@@ -610,17 +610,15 @@ EOH
 )
 
     if [ "${_UNSET:-NULL}" == 'NULL' ]; then
-        DATA_BINARY="${REQUIRE_PULL_REQUEST_REVIEW}"
         log_term 1 "\nSetting repository permissions to enable branch protection for \"${_REPOSITORY}/${_BRANCH}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         # Set restrictions on the named branch to require pull-requests
-        curl --quiet -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${DATA_BINARY}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
+        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${UPDATE_BRANCH_PROTECTION}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
     else
-        DATA_BINARY="${RESTRICT_TO_OWNERS}"
         log_term 1 "\nSetting repository permissions to disable branch protection for \"${_REPOSITORY}/${_BRANCH}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         # Set restrictions on the named branch to require pull-requests
-        curl --quiet -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
+        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
     fi
 
 }
