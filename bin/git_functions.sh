@@ -587,14 +587,21 @@ repository_set_permissions () {
     #+ Disable users and teams restrictions
     REQUIRE_PULL_REQUEST_REVIEW=$(cat <<EOH
 {
-  "required_pull_request_reviews": {
-    "include_admins": true
-  },
   "required_status_checks": {
     "strict": true,
     "contexts": [
       "continuous-integration/travis-ci"
     ]
+  },
+  "required_pull_request_reviews": {
+    "dismissal_restrictions": {
+      "users": [
+      ],
+      "teams": [
+      ]
+    },
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true
   },
   "enforce_admins": true,
   "restrictions": null
@@ -602,39 +609,20 @@ repository_set_permissions () {
 EOH
 )
 
-    # Set up GitHub PUT data to:
-    #+ Disable code reviews, includig owners
-    #+ Disable checks
-    #+ Restrict operations to orginization and repository administrators
-    RESTRICT_TO_OWNERS=$(cat <<EOH
-{
-  "required_pull_request_reviews": null,
-  "required_status_checks": null,
-  "enforce_admins": true,
-  "restrictions": {
-    "users": [
-    ],
-    "teams": [
-    ]
-  }
-}
-EOH
-)
-
     if [ "${_UNSET:-NULL}" == 'NULL' ]; then
         DATA_BINARY="${REQUIRE_PULL_REQUEST_REVIEW}"
-        log_term 1 "\nSetting repository permissions to require code reviews for \"${_REPOSITORY}\"." -e
+        log_term 1 "\nSetting repository permissions to enable branch protection for \"${_REPOSITORY}/${_BRANCH}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        # Set restrictions on the named branch to require pull-requests
+        curl --quiet -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${DATA_BINARY}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
     else
         DATA_BINARY="${RESTRICT_TO_OWNERS}"
-        log_term 1 "\nSetting repository permissions to disable code reviews for \"${_REPOSITORY}\"." -e
+        log_term 1 "\nSetting repository permissions to disable branch protection for \"${_REPOSITORY}/${_BRANCH}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        # Set restrictions on the named branch to require pull-requests
+        curl --quiet -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
     fi
 
-    log_term 1 "\nSetting repository permissions for \"${_REPOSITORY}\"." -e
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    # Set restrictions on the named branch to require pull-requests
-    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${DATA_BINARY}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
 }
 
 # Set up a repository for a release
@@ -788,11 +776,13 @@ repository_complete_release () {
 
     # If we have a release we need to delete it before recreating it
     if [ "${_RELEASE_ID:-null}" != 'null' ]; then
-        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/"${_RELEASE_ID}"
+        log_term 1 "\nFound existing release with id:\"${_RELEASE_ID}\". Deleting..." -e
+        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/"${_RELEASE_ID}" > /dev/null 2>&1
     fi
 
     # Now we can create the release
-    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request POST --data "{\"tag_name\": \"${_RELEASE}\"}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases
+    log_term 1 "\nCreating release on github for \"${_REPOSITORY}\"." -e
+    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request POST --data "{\"tag_name\": \"${_RELEASE}\"}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases > /dev/null 2>&1
 
     # Close release issue and milestone (if it exists and is open)
     local _ISSUE_TITLE="Tag ${_RELEASE} release"
