@@ -1,5 +1,3 @@
-﻿
-
 # Nubis Release
 
 [![Version](https://img.shields.io/github/release/nubisproject/nubis-release.svg?maxAge=2592000)](https://github.com/nubisproject/nubis-release/releases)
@@ -72,11 +70,11 @@ Folow the instructions labeled "Normal Release". This follows the basic
 work-flow:
 
 1. Build and Release all repositories
-1. Generate closed issue list
-1. Create a release presentation
-1. Send a release announcement
-1. Create milestones for the next release
-1. Build the AMIs for the next release development cycle
+2. Generate closed issue list
+3. Create a release presentation
+4. Send a release announcement
+5. Create milestones for the next release
+6. Build the AMIs for the next release development cycle
 
 ## Create a patch release
 
@@ -92,9 +90,9 @@ Folow the instructions labeled "Patch Release". This follows the basic
 work-flow:
 
 1. Set up patch release
-1. Apply patches
-1. Build and Release all repositories
-1. Send a release announcement
+2. Apply patches
+3. Build and Release all repositories
+4. Send a release announcement
 
 ## Release a single repository
 
