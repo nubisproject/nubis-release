@@ -66,18 +66,18 @@ edit_deploy_templates () {
 
     ENTRY_PWD=$(pwd)
 
-    local _CONSUL_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/consul/main.tf"
     local _VPC_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/vpc/main.tf"
 
     # This matches a release (v1.3.0) a dev release (v1.3.0-dev) or master or develop
     local _RELEASE_REGEX="\(\(v\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\(-dev\)\{0,1\}\)\|master\|develop\)"
 
-    sed -i "s:nubis-consul//nubis/terraform/multi?ref=${_RELEASE_REGEX}:nubis-consul//nubis/terraform/multi?ref=${_REF}:g" "${_CONSUL_FILE}"
+    sed -i "s:nubis-consul//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-consul//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
 
     sed -i "s:nubis-jumphost//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-jumphost//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-fluent-collector//nubis/terraform/multi?ref=${_RELEASE_REGEX}:nubis-fluent-collector//nubis/terraform/multi?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-fluent-collector//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-fluent-collector//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-prometheus//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-prometheus//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-ci//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-ci//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-sso//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-sso//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
 
     # Check in the edits
     #+ Unless we are on master or develop (assume these are test builds)

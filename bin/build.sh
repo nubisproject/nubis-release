@@ -3,6 +3,9 @@
 # These functions drive nubis-builder
 #
 
+# Set up the aws-vault command as it is used twice in this script
+AWS_VAULT_EXEC=( 'aws-vault' 'exec' "${PROFILE}" '--assume-role-ttl=1h' '--session-ttl=4h' '--' )
+
 # Clean up any librarian-puppet files
 clean_librarian_puppet () {
     local _REPOSITORY="${1}"
@@ -57,7 +60,18 @@ build_amis () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     exec 5>&1
     cd "${REPOSITORY_PATH}/${_REPOSITORY}" || exit 1
-    OUTPUT=$(nubis-builder build --spot --instance-type c3.large | tee >(cat - >&5))
+    # Make this command a bit more readable
+    #+ NOTE: NUBIS_DOCKER_BUILDER_VERSION and AMI_COPY_REGIONS are set in the top level variables file
+    NUBIS_DOCKER=( 'docker' 'run' \
+                '-u' "$UID:$(id -g)" \
+                '--env-file' "$(echo ~)/.docker_env" \
+                '-v' "$PWD:/nubis/data" \
+                '-'e "GIT_COMMIT_SHA=$(git rev-parse HEAD)" \
+                "nubisproject/nubis-builder:${NUBIS_DOCKER_BUILDER_VERSION}" \
+                '--copy-regions' "${AMI_COPY_REGIONS}" \
+                'build' \
+                '--instance-type' 'c3.large' )
+    OUTPUT=$("${AWS_VAULT_EXEC[@]}" "${NUBIS_DOCKER[@]}" | tee >(cat - >&5))
     # https://github.com/koalaman/shellcheck/wiki/SC2181
     # shellcheck disable=SC2181
     if [ $? != '0' ]; then
@@ -125,16 +139,16 @@ build_and_release_all () {
             if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
                 log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                $0 setup-release "${LAMBDA_FUNCTION}" "${_RELEASE}"
+                $0 setup-release "${LAMBDA_FUNCTION}" "${_RELEASE}" || exit 1
             fi
 
             log_term 1 "\nUploading Lambda function:: \"${LAMBDA_FUNCTION}\"" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            "$0" upload-assets --multi-region --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}"
+            "$0" upload-assets --multi-region --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}" || exit 1
 
             log_term 1 "\nComplete releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            "$0" complete-release "${LAMBDA_FUNCTION}" "${_RELEASE}"
+            "$0" complete-release "${LAMBDA_FUNCTION}" "${_RELEASE}" || exit 1
             RELEASED_REPOSITORIES+=( "${LAMBDA_FUNCTION}" )
             let _COUNT=${_COUNT}+1
         done
@@ -159,15 +173,11 @@ build_and_release_all () {
         edit_deploy_templates "${_RELEASE}" 'develop'
     fi
 
-    # Hack for aws-vault as server mode seems broken on Ubuntu
     # Expire any sessions for the build account and generate a new session
     # This should enable us to complete the builds before the session expires
-    NUBIS_BUILDER_PATH="$(dirname "$(dirname "$(readlink -f "$(which nubis-builder)")")")"
-    _VAULT_PROFILE=$(jq .variables.aws_vault_profile "${NUBIS_BUILDER_PATH}"/secrets/variables.json)
-    _VAULT_PROFILE=${_VAULT_PROFILE##\"}; _VAULT_PROFILE=${_VAULT_PROFILE%%\"}
-    _VAULT_ACCOUNT=$(echo "${_VAULT_PROFILE}" | cut -d'-' -f 1,2)
+    _VAULT_ACCOUNT=$(echo "${PROFILE}" | cut -d'-' -f 1,2)
     aws-vault rm -s "${_VAULT_ACCOUNT}"
-    aws-vault exec "${_VAULT_PROFILE}" -- aws ec2 describe-regions > /dev/null || exit 1
+    "${AWS_VAULT_EXEC[@]}" aws ec2 describe-regions > /dev/null || exit 1
     unset _VAULT_PROFILE _VAULT_ACCOUNT
 
     log_term 0 '\nIf you care to monitor the build progress:' -e
