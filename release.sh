@@ -94,7 +94,7 @@ instructions () {
     echo -e "\n\e[1;4;33mNormal Release:\e[0m\n"
     echo "rvm use 2.1"
     echo "RELEASE='v1.4.0'"
-    echo "$0 --non-interactive build-and-release-all \${RELEASE}"
+    echo "$0 --non-interactive -vv build-and-release-all \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables.sh"
     echo "vi ./variables.sh"
     echo "$0 generate-csv"
@@ -105,13 +105,13 @@ instructions () {
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
     echo "RELEASE='v1.X.0' # For the next release"
     echo "$0 create-milestones \${RELEASE}"
-    echo "$0 --non-interactive build-all \${RELEASE}-dev"
+    echo "$0 --non-interactive -vv build-all \${RELEASE}-dev"
 
     echo -e "\n\n\e[1;4;33mPatch release:\e[0m\n"
     echo "rvm use 2.1"
     echo "RELEASE='v1.4.1'"
     echo "PREVIOUS_RELEASE='v1.4.0' # This is the release the patch will use as a starting point, a git ref."
-    echo "$0 --non-interactive patch-release-setup \${RELEASE} \${PREVIOUS_RELEASE}"
+    echo "$0 --non-interactive -vv patch-release-setup \${RELEASE} \${PREVIOUS_RELEASE}"
     echo "Perform manual patching"
     echo "$0 --non-interactive patch-release-complete \${RELEASE}"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
@@ -303,7 +303,7 @@ while [ "$1" != "" ]; do
                 # Set up release
                 log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                if [ "$($0 setup-release "${REPOSITORY}" "${RELEASE}")" != '0' ]; then
+                if ! "$0" setup-release "${REPOSITORY}" "${RELEASE}" ; then
                     log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
                     log_term 0 "Aborting....."
                     exit 1
@@ -312,7 +312,7 @@ while [ "$1" != "" ]; do
             # Build the AMI
             log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            if [ "$($0 build "${REPOSITORY}" "${RELEASE}")" != '0' ]; then
+            if ! "$0" build "${REPOSITORY}" "${RELEASE}" ; then
                 log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
@@ -320,7 +320,7 @@ while [ "$1" != "" ]; do
             # Release repository
             log_term 1 "\nReleasing repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            if [ "$($0 complete-release "${REPOSITORY}" "${RELEASE}")" != '0' ]; then
+            if ! "$0" complete-release "${REPOSITORY}" "${RELEASE}" ; then
                 log_term 0 "Release for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
