@@ -64,9 +64,9 @@ build_amis () {
     #+ NOTE: NUBIS_DOCKER_BUILDER_VERSION and AMI_COPY_REGIONS are set in the top level variables file
     NUBIS_DOCKER=( 'docker' 'run' \
                 '-u' "$UID:$(id -g)" \
-                '--env-file' "$(echo ~)/.docker_env" \
+                '--env-file' "${HOME}/.docker_env" \
                 '-v' "$PWD:/nubis/data" \
-                '-'e "GIT_COMMIT_SHA=$(git rev-parse HEAD)" \
+                '-e' "GIT_COMMIT_SHA=$(git rev-parse HEAD)" \
                 "nubisproject/nubis-builder:${NUBIS_DOCKER_BUILDER_VERSION}" \
                 '--copy-regions' "${AMI_COPY_REGIONS}" \
                 'build' \
