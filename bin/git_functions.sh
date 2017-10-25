@@ -271,17 +271,16 @@ generate_release_csv () {
 #+ Otherwise check out develop branch
 clone_repository () {
     local _REPOSITORY="${1}"
-    local _GIT_REF="${2}"
     if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
         log_term 0 "You must specify a repository!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
     # If the repository exists in the repository path, remove it
-    if [ -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
+    if [ -d "${REPOSITORY_PATH}/${_REPOSITORY}" ]; then
         log_term 1 "Directory \"${REPOSITORY_PATH}/${_REPOSITORY}\" already exists. Removing!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        rm -rf "${REPOSITORY_PATH:?'REPOSITORY_PATH is unset'}"/"${_REPOSITORY:?'REPOSITORY is unset'}" || exit 1
+        rm -rf "${REPOSITORY_PATH:?'REPOSITORY_PATH is unset'}/${_REPOSITORY:?'REPOSITORY is unset'}" || exit 1
 
     fi
     # If the repository path does not exist, create it
@@ -292,17 +291,25 @@ clone_repository () {
 
     fi
     cd "${REPOSITORY_PATH}" || exit 1
-    SSH_URL=$(curl -s https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | jq -r '.ssh_url')
+    SSH_URL=$(curl -s "https://api.github.com/repos/${GITHUB_ORGINIZATION}/${_REPOSITORY}" | jq -r '.ssh_url')
     git clone "${SSH_URL}" || exit 1
     cd "${_REPOSITORY}" || exit 1
-    # If a git ref was specified, checkout at that ref
-    if [ "${_GIT_REF:-NULL}" != 'NULL' ]; then
-        git checkout "${_GIT_REF}" || exit 1
-        git submodule update --init --recursive || exit 1
+    # If a patch version was specified check out at that release.
+    #+ If the repository has a patch branch, check out that branch.
+    #+ Generally a patch is a previous releas tag (ie: v2.0.2)
+    #+ Otherwise assume this is a normal release and check out the develop branch.
+    if [ "${RELEASE_TO_PATCH:-NULL}" != 'NULL' ]; then
+        local _PATCH_BRANCH_TEST=$(git branch -r --list "origin/patch-${RELEASE_TO_PATCH:-NULL}")
+        if [ "${#_PATCH_BRANCH_TEST}" != 0 ]; then
+            git checkout "patch-${RELEASE_TO_PATCH}" || exit 1
+        else
+            git checkout "${RELEASE_TO_PATCH}" || exit 1
+        fi
     else
         git checkout develop || exit 1
-        git submodule update --init --recursive || exit 1
     fi
+    # Grab any submodules
+    git submodule update --init --recursive || exit 1
 }
 
 # Create a releae branch on named repositry
@@ -628,7 +635,6 @@ EOH
 repository_setup_release () {
     local _REPOSITORY="${1}"
     local _RELEASE="${2}"
-    local _GIT_REF="${3}"
     if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
         log_term 0 "Repository required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -642,18 +648,12 @@ repository_setup_release () {
         exit 1
     fi
     # Ensure the repository exists in the repository path
-    # This will check out the develop branch
+    # This will check out the develop or patch branch
     if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
         log_term 1 "Repository '${_REPOSITORY}' not cheked out out in repository path '${REPOSITORY_PATH}'!"
         log_term 1 "\nCloning repository: \"${_REPOSITORY}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        # If a git ref was specified, clone at that ref
-        if [ "${_GIT_REF:-NULL}" != 'NULL' ]; then
-            clone_repository "${_REPOSITORY}" "${_GIT_REF}" || exit 1
-        else
-            clone_repository "${_REPOSITORY}" || exit 1
-        fi
-
+        clone_repository "${_REPOSITORY}" || exit 1
     fi
     cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
 

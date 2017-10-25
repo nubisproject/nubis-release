@@ -244,39 +244,6 @@ build_and_release_all () {
     unset RELEASED_REPOSITORIES BUILT_REPOSITORIES
 }
 
-patch_release_setup () {
-    local _RELEASE="${1}"
-    local _GIT_REF="${2}"
-    if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        "$0" help
-        exit 1
-    fi
-    if [ "${_GIT_REF:-NULL}" == 'NULL' ]; then
-        log_term 0 "Git ref required for patch setup"
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        "$0" help
-        exit 1
-    fi
-    # Get list of repositories
-    # Sets: ${REPOSITORY_LIST_ARRAY[*]} ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]}  ${REPOSITORY_EXCLUDE_ARRAY[*]}
-    get_repositories
-
-    # Clone all relevant repositories
-    if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
-        declare -a REPOSITORY_ALL_RELEASE_ARRAY=( 'nubis-base' ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]} ${_LAMBDA_LIST[*]} )
-        local _COUNT=1
-        for REPOSITORY in ${REPOSITORY_ALL_RELEASE_ARRAY[*]}; do
-            log_term 1 "\nCloning repository \"${REPOSITORY}\" for \"${_RELEASE}\" at \"${_GIT_REF}\". (${_COUNT} of ${#REPOSITORY_RELEASE_ARRAY[*]})" -e
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            $0 setup-release "${REPOSITORY}" "${_RELEASE}" "${_GIT_REF}"
-            let _COUNT=${_COUNT}+1
-        done
-        unset REPOSITORY_ALL_RELEASE_ARRAY REPOSITORY _COUNT
-    fi
-}
-
 clone_all_repositories () {
     # Get list of repositories
     # Sets: ${REPOSITORY_LIST_ARRAY[*]} ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]}  ${REPOSITORY_EXCLUDE_ARRAY[*]}
