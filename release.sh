@@ -91,9 +91,9 @@ source_files () {
 
 instructions () {
     test_for_rvm
-    echo -e "\n\e[1;4;33mNormal Release:\e[0m\n"
+    echo -e "\n\e[1;4;33mNormal Release Instructions:\e[0m\n"
     echo "rvm use 2.1"
-    echo "RELEASE='v1.4.0'"
+    echo "RELEASE='v2.0.x'"
     echo "$0 --non-interactive -vv build-and-release-all \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables.sh"
     echo "vi ./variables.sh"
@@ -103,17 +103,15 @@ instructions () {
     echo "$0 --get-release-stats"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
-    echo "RELEASE='v1.X.0' # For the next release"
+    echo "RELEASE='v2.x.0' # For the next release"
     echo "$0 create-milestones \${RELEASE}"
     echo "$0 --non-interactive -vv build-all \${RELEASE}-dev"
 
-    echo -e "\n\n\e[1;4;33mPatch release:\e[0m\n"
+    echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
     echo "rvm use 2.1"
-    echo "RELEASE='v1.4.1'"
-    echo "PREVIOUS_RELEASE='v1.4.0' # This is the release the patch will use as a starting point, a git ref."
-    echo "$0 --non-interactive -vv patch-release-setup \${RELEASE} \${PREVIOUS_RELEASE}"
-    echo "Perform manual patching"
-    echo "$0 --non-interactive patch-release-complete \${RELEASE}"
+    echo "RELEASE='v2.0.2' # The new release number."
+    echo "RELEASE_TO_PATCH='v2.0.1' # The previous release we are going to patch."
+    echo "$0 --non-interactive -vv --patch \${RELEASE_TO_PATCH} build-and-release-all \${RELEASE}"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
     echo -e "\n"
@@ -134,9 +132,79 @@ release_stats () {
 # Grab and setup called options
 while [ "$1" != "" ]; do
     case $1 in
+         -h | -H | --help )
+            echo -en "\nUsage: $0 [options] command [repository]\n\n"
+            echo -en "Commands:\n"
+            echo -en "  build [REPO] [REL]                  Build AMIs for [REPO] repository at [REL] release\n"
+            echo -en "  build-all [REL]                     Build all infrastructure repositories (set in variables file)\n"
+            echo -en "  build-and-release [REPO] [REL]      Build and release named repository\n"
+            echo -en "  build-and-release-all [REL]         Build and release all repositories (set in variables file)\n"
+            echo -en "  close-milestones [REL]              Close all milestones in Github\n"
+            echo -en "  create-milestones [REL]             Create all milestones in Github\n"
+            echo -en "  generate-csv [file]                 Generate CSV file of release issues. Optionally declare [file]name\n"
+            echo -en "  release [REPO] [REL]                Release [REPO] repository at [REL] release\n"
+            echo -en "  upload-assets [REL]                 Upload aritfacts to S3\n\n"
+            echo -en "Options:\n"
+            echo -en "  --help              -h      Print this help information and exit\n"
+            echo -en "  --instructions      -i      Echo build steps\n"
+            echo -en "  --login             -l      Specify a login to use when forking repositories\n"
+            echo -en "                                Defaults to '${GITHUB_LOGIN}'\n"
+            echo -en "  --patch                     Specify a release tag to base the patch release from.\n"
+            echo -en "  --path              -p      Specify a path where your nubis repositories are checked out\n"
+            echo -en "                                Defaults to '${REPOSITORY_PATH}'\n"
+            echo -en "  --profile           -P      Specify a profile to use when uploading the files\n"
+            echo -en "                                Defaults to '$PROFILE'\n"
+            echo -en "  --silent            -s      Silence terminal output.\n"
+            echo -en "                                Default: OFF\n"
+            echo -en "  --get-release-stats -S      Help for generating stats for release documentation\n"
+            echo -en "  --terminal          -T      Duplicate all log and debug messages to the terminsl\n"
+            echo -en "                                Default: ON\n"
+            echo -en "  --info              -v      Turn on info, should be set before other arguments\n"
+            echo -en "  --verbose           -vv     Turn on verbosity, should be set before other arguments\n"
+            echo -en "  --debug             -vvv    Turn on debugging, should be set before other arguments\n"
+            echo -en "  --setx              -x      Turn on bash setx, should be set before other arguments\n"
+            echo -en "  --non-interactive   -y      Set to skip all interactive prompts\n"
+            echo -en "                                Basically set -x\n\n"
+            exit 0
+        ;;
+        -i | --instructions )
+            source_files
+            instructions
+            GOT_COMMAND=1
+        ;;
+        -l | --login )
+            # The github login to fork new repositories against
+            export GITHUB_LOGIN=$2
+            shift
+        ;;
+        --patch )
+            # The release number to patch from (tag to check out as starting point for release)
+            export RELEASE_TO_PATCH=$2
+            shift
+        ;;
+        -p | --path )
+            # The path to where repositories are checked out
+            export REPOSITORY_PATH=$2
+            shift
+        ;;
+        -P | --profile )
+            # The profile to use to upload files
+            export PROFILE=$2
+            shift
+        ;;
         -s | --silent)
             export VERBOSE_SILENT=1
             log_term 2 "Terminal output silent set to: ${VERBOSE_SILENT}"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        ;;
+        -S | --get-release-stats )
+            source_files
+            release_stats
+            GOT_COMMAND=1
+        ;;
+        -T | --terminal )
+            export VERBOSE_TERMINAL=1
+            log_term 1 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         ;;
         -v | --info )
@@ -160,106 +228,15 @@ while [ "$1" != "" ]; do
             log_term 2 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}. Disable with '--silent'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         ;;
-        -T | --terminal )
-            export VERBOSE_TERMINAL=1
-            log_term 1 "Duplicate log to terminal set to: ${VERBOSE_TERMINAL}"
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        ;;
         -x | --setx )
             log_term 1 "Setting 'set -x'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             set -x
             export SET_X=1
         ;;
-        -p | --path )
-            # The path to where repositories are checked out
-            export REPOSITORY_PATH=$2
-            shift
-        ;;
-        -l | --login )
-            # The github login to fork new repositories against
-            export GITHUB_LOGIN=$2
-            shift
-        ;;
-        -P | --profile )
-            # The profile to use to upload files
-            export PROFILE=$2
-            shift
-        ;;
         -y | --non-interactive )
             # Set to skip interactive prompts
             export NON_INTERACTIVE='yes'
-        ;;
-        -i | --instructions )
-            source_files
-            instructions
-            GOT_COMMAND=1
-        ;;
-        -S | --get-release-stats )
-            source_files
-            release_stats
-            GOT_COMMAND=1
-        ;;
-         -h | -H | --help )
-            echo -en "$0\n\n"
-            echo -en "Usage: $0 [options] command [repository]\n\n"
-            echo -en "Commands:\n"
-            echo -en "  create-milestones [REL]             Create all milestones in Github\n"
-            echo -en "  close-milestones [REL]              Close all milestones in Github\n"
-            echo -en "  upload-assets [REL]                 Upload aritfacts to S3\n"
-            echo -en "  build [REPO] [REL]                  Build AMIs for [REPO] repository at [REL] release\n"
-            echo -en "  setup-release [REPO] [REL] [REF]    Checks out repository [REPO] repository for [REL] release at [REF]\n"
-            echo -en "  complete-release [REPO] [REL]       Release [REPO] repository at [REL] release\n"
-            echo -en "  release [REPO] [REL]                Release [REPO] repository at [REL] release\n"
-            echo -en "  build-and-release [REPO] [REL]      Build and release named repository\n\n"
-            echo -en "  build-and-release-all [REL]         Build and release all repositories (set in variables file)\n\n"
-            echo -en "  build-all [REL]                     Build all infrastructure repositories (set in variables file)\n\n"
-            echo -en "  patch-release-setup  [REL] [REF]    Checks out repositories at a given ref\n\n"
-            echo -en "  patch-release-complete [REL]        Updates files and releases repositories\n\n"
-            echo -en "  generate-csv [file]                 Generate CSV file of release issues. Optionally declare [file]name\n\n"
-            echo -en "  install-rvm                         Attempt to install rvm EXPERIMENTAL\n\n"
-            echo -en "Options:\n"
-            echo -en "  --help              -h      Print this help information and exit\n"
-            echo -en "  --instructions      -i      Echo build steps\n\n"
-            echo -en "  --get-release-stats -S      Help for generating stats for release documentation\n\n"
-            echo -en "  --path              -p      Specify a path where your nubis repositories are checked out\n"
-            echo -en "                                Defaults to '${REPOSITORY_PATH}'\n"
-            echo -en "  --login             -l      Specify a login to use when forking repositories\n"
-            echo -en "                                Defaults to '${GITHUB_LOGIN}'\n"
-            echo -en "  --profile           -P      Specify a profile to use when uploading the files\n"
-            echo -en "                                Defaults to '$PROFILE'\n"
-            echo -en "  --non-interactive   -y      Set to skip all interactive prompts\n"
-            echo -en "  --info              -v      Turn on info, should be set before other arguments\n"
-            echo -en "  --verbose           -vv     Turn on verbosity, should be set before other arguments\n"
-            echo -en "  --debug             -vvv    Turn on debugging, should be set before other arguments\n"
-            echo -en "  --setx              -x      Turn on bash setx, should be set before other arguments\n"
-            echo -en "                                Basically set -x\n\n"
-            exit 0
-        ;;
-        clone-all-repositories )
-            source_files
-            clone_all_repositories
-            GOT_COMMAND=1
-        ;;
-        create-milestones )
-            RELEASE="${2}"
-            source_files
-            create_milestones "${RELEASE}"
-            GOT_COMMAND=1
-        ;;
-        close-milestones )
-            RELEASE="${2}"
-            source_files
-            close_milestones "${RELEASE}"
-            GOT_COMMAND=1
-        ;;
-        upload-assets )
-            shift
-            source_files
-            # This is treated as a sub command, so lets just pass through all the caller options
-            upload-assets "${@}"
-            shift ${#}
-            GOT_COMMAND=1
         ;;
         build )
             REPOSITORY="${2}"
@@ -268,30 +245,10 @@ while [ "$1" != "" ]; do
             build_amis "${REPOSITORY}" "${RELEASE}"
             GOT_COMMAND=1
         ;;
-        setup-release )
-            REPOSITORY="${2}"
-            RELEASE="${3}"
-            GIT_REF="${4}"
+        build-all )
+            RELEASE="${2}"
             source_files
-            repository_setup_release "${REPOSITORY}" "${RELEASE}" "${GIT_REF}"
-            GOT_COMMAND=1
-        ;;
-        complete-release )
-            REPOSITORY="${2}"
-            RELEASE="${3}"
-            source_files
-            repository_complete_release "${REPOSITORY}" "${RELEASE}"
-            GOT_COMMAND=1
-        ;;
-        release )
-            REPOSITORY="${2}"
-            RELEASE="${3}"
-            SKIP_SETUP="${4}"
-            source_files
-            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
-                $0 setup-release "${REPOSITORY}" "${RELEASE}"
-            fi
-            $0 complete-release "${REPOSITORY}" "${RELEASE}"
+            build_and_release_all "${RELEASE}" 'skip-release'
             GOT_COMMAND=1
         ;;
         build-and-release )
@@ -333,23 +290,28 @@ while [ "$1" != "" ]; do
             build_and_release_all "${RELEASE}"
             GOT_COMMAND=1
         ;;
-        build-all )
-            RELEASE="${2}"
+        clone-all-repositories )
             source_files
-            build_and_release_all "${RELEASE}" 'skip-release'
+            clone_all_repositories
             GOT_COMMAND=1
         ;;
-        patch-release-setup )
+        close-milestones )
             RELEASE="${2}"
-            GIT_REF="${3}"
             source_files
-            patch_release_setup "${RELEASE}" "${GIT_REF}"
+            close_milestones "${RELEASE}"
             GOT_COMMAND=1
         ;;
-        patch-release-complete )
+        complete-release )
+            REPOSITORY="${2}"
+            RELEASE="${3}"
+            source_files
+            repository_complete_release "${REPOSITORY}" "${RELEASE}"
+            GOT_COMMAND=1
+        ;;
+        create-milestones )
             RELEASE="${2}"
             source_files
-            build_and_release_all "${RELEASE}" 'NULL' 'skip-setup'
+            create_milestones "${RELEASE}"
             GOT_COMMAND=1
         ;;
         generate-csv )
@@ -363,11 +325,38 @@ while [ "$1" != "" ]; do
             install_rvm
             GOT_COMMAND=1
         ;;
+        release )
+            REPOSITORY="${2}"
+            RELEASE="${3}"
+            SKIP_SETUP="${4}"
+            source_files
+            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
+                $0 setup-release "${REPOSITORY}" "${RELEASE}"
+            fi
+            $0 complete-release "${REPOSITORY}" "${RELEASE}"
+            GOT_COMMAND=1
+        ;;
+        setup-release )
+            REPOSITORY="${2}"
+            RELEASE="${3}"
+            GIT_REF="${4}"
+            source_files
+            repository_setup_release "${REPOSITORY}" "${RELEASE}" "${GIT_REF}"
+            GOT_COMMAND=1
+        ;;
         testing )
             RELEASE="${2}"
             source_files
             RET=$(testing "${RELEASE}")
             echo "RET: $RET"
+            GOT_COMMAND=1
+        ;;
+        upload-assets )
+            shift
+            source_files
+            # This is treated as a sub command, so lets just pass through all the caller options
+            upload-assets "${@}"
+            shift ${#}
             GOT_COMMAND=1
         ;;
     esac
