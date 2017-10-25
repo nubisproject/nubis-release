@@ -299,7 +299,7 @@ clone_repository () {
     #+ Generally a patch is a previous releas tag (ie: v2.0.2)
     #+ Otherwise assume this is a normal release and check out the develop branch.
     if [ "${RELEASE_TO_PATCH:-NULL}" != 'NULL' ]; then
-        local _PATCH_BRANCH_TEST=$(git branch -r --list "origin/patch-${RELEASE_TO_PATCH:-NULL}")
+        local _PATCH_BRANCH_TEST; _PATCH_BRANCH_TEST=$(git branch -r --list "origin/patch-${RELEASE_TO_PATCH:-NULL}")
         if [ "${#_PATCH_BRANCH_TEST}" != 0 ]; then
             git checkout "patch-${RELEASE_TO_PATCH}" || exit 1
         else
