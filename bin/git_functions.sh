@@ -267,8 +267,6 @@ generate_release_csv () {
 }
 
 # Clones the named repository
-#+ Optionally specify a git ref (hash, branch, tag, release, etc) to check out
-#+ Otherwise check out develop branch
 clone_repository () {
     local _REPOSITORY="${1}"
     if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
@@ -631,7 +629,6 @@ EOH
 }
 
 # Set up a repository for a release
-# A git ref (hash, branch, tag, release, etc) can be specified to start the release for
 repository_setup_release () {
     local _REPOSITORY="${1}"
     local _RELEASE="${2}"
@@ -647,14 +644,11 @@ repository_setup_release () {
         $0 help
         exit 1
     fi
-    # Ensure the repository exists in the repository path
+    # Check out the repository in the repository path
     # This will check out the develop or patch branch
-    if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
-        log_term 1 "Repository '${_REPOSITORY}' not cheked out out in repository path '${REPOSITORY_PATH}'!"
-        log_term 1 "\nCloning repository: \"${_REPOSITORY}\"." -e
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        clone_repository "${_REPOSITORY}" || exit 1
-    fi
+    log_term 1 "\nCloning repository: \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    clone_repository "${_REPOSITORY}" || exit 1
     cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
 
     # Create a release branch for us to work on
