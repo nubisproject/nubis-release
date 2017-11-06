@@ -106,7 +106,7 @@ instructions () {
     echo "RELEASE='v2.x.0-dev' # For the next release"
     echo "$0 create-milestones \${RELEASE}"
     echo "$0 --non-interactive -vv build-all \${RELEASE}"
-    echo "$0 -vv upload-assets --multi-region --release \${RELEASE} push-lambda"
+    echo "$0 --non-interactive -vv upload-assets --multi-region --release \${RELEASE} push-lambda"
 
     echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
     echo "rvm use 2.1"
