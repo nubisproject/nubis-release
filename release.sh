@@ -103,9 +103,10 @@ instructions () {
     echo "$0 --get-release-stats"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
-    echo "RELEASE='v2.x.0' # For the next release"
+    echo "RELEASE='v2.x.0-dev' # For the next release"
     echo "$0 create-milestones \${RELEASE}"
-    echo "$0 --non-interactive -vv build-all \${RELEASE}-dev"
+    echo "$0 --non-interactive -vv build-all \${RELEASE}"
+    echo "$0 --non-interactive -vv upload-assets --multi-region --release \${RELEASE} push-lambda"
 
     echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
     echo "rvm use 2.1"
