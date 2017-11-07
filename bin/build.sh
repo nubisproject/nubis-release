@@ -32,6 +32,7 @@ build_amis () {
     test_for_nubis_builder
     local _REPOSITORY="${1}"
     local _RELEASE="${2}"
+    local _SKIP_CLONE
     if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
         log_term 0 "Repository required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -45,12 +46,13 @@ build_amis () {
         exit 1
     fi
     # Ensure the repository exists in the repository path
-    # This will check out the develop branch
-    if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
-        log_term 1 "Repository '${_REPOSITORY}' not chekcout out in repository path '${REPOSITORY_PATH}'!"
+    # If we are releaseing, the clone (and branching) has been done already
+    #+ In that case we skip the clone here.
+    # This will check out the develop or patch branch
+    if [ "${#_SKIP_CLONE}" == 0 ]; then
         log_term 1 "\nCloning repository: \"${_REPOSITORY}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        clone_repository "${_REPOSITORY}"
+        clone_repository "${_REPOSITORY}" || exit 1
     fi
 
     edit_project_json "${_RELEASE}" "${_REPOSITORY}"
@@ -116,7 +118,6 @@ build_and_release_all () {
     test_for_parallel
     local _RELEASE="${1}"
     local _SKIP_RELEASE="${2}"
-    local _SKIP_SETUP="${3}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -131,29 +132,29 @@ build_and_release_all () {
     get_repositories
 
     # Bundle, Upload and Release all lambda functions
-    if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
-        local _COUNT=1
-        # https://github.com/koalaman/shellcheck/wiki/SC2153
-        # shellcheck disable=SC2153
-        for LAMBDA_FUNCTION in "${LAMBDA_FUNCTIONS[@]}"; do
-            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
-                log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
-                log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                $0 setup-release "${LAMBDA_FUNCTION}" "${_RELEASE}" || exit 1
-            fi
-
-            log_term 1 "\nUploading Lambda function:: \"${LAMBDA_FUNCTION}\"" -e
+    local _COUNT=1
+    # https://github.com/koalaman/shellcheck/wiki/SC2153
+    # shellcheck disable=SC2153
+    for LAMBDA_FUNCTION in "${LAMBDA_FUNCTIONS[@]}"; do
+        if [ "${_SKIP_RELEASE:-NULL}" == 'NULL' ]; then
+            log_term 1 "\nSetup releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            "$0" upload-assets --multi-region --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}" || exit 1
+            $0 setup-release "${LAMBDA_FUNCTION}" "${_RELEASE}" || exit 1
+        fi
 
+        log_term 1 "\nUploading Lambda function: \"${LAMBDA_FUNCTION}\"" -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        "$0" upload-assets --multi-region --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}" || exit 1
+
+        if [ "${_SKIP_RELEASE:-NULL}" == 'NULL' ]; then
             log_term 1 "\nComplete releasing repository \"${LAMBDA_FUNCTION}\" at \"${_RELEASE}\". (${_COUNT} of ${#LAMBDA_FUNCTIONS[*]})" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             "$0" complete-release "${LAMBDA_FUNCTION}" "${_RELEASE}" || exit 1
             RELEASED_REPOSITORIES+=( "${LAMBDA_FUNCTION}" )
-            let _COUNT=${_COUNT}+1
-        done
-        unset LAMBDA_FUNCTION _COUNT
-    fi
+        fi
+        let _COUNT=${_COUNT}+1
+    done
+    unset LAMBDA_FUNCTION _COUNT
 
     # Release all non-infrastructure repositories
     local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
@@ -162,7 +163,7 @@ build_and_release_all () {
         for REPOSITORY in ${REPOSITORY_RELEASE_ARRAY[*]}; do
             log_term 1 "\nReleasing repository \"${REPOSITORY}\" at \"${_RELEASE}\". (${_COUNT} of ${#REPOSITORY_RELEASE_ARRAY[*]})" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            "$0" release  "${REPOSITORY}" "${_RELEASE}" "${_SKIP_SETUP}"
+            "$0" release  "${REPOSITORY}" "${_RELEASE}"
             RELEASED_REPOSITORIES=( ${RELEASED_REPOSITORIES[*]} ${REPOSITORY} )
             let _COUNT=${_COUNT}+1
         done
@@ -188,7 +189,7 @@ build_and_release_all () {
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         log_term 1 "\nBuild and Release \"nubis-base\" at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build-and-release '{1}' "${_RELEASE}" "${_SKIP_SETUP}" ::: 'nubis-base'
+        parallel --no-notice --output-as-files --results logs "$0" --non-interactive build-and-release '{1}' "${_RELEASE}" ::: 'nubis-base'
         # https://github.com/koalaman/shellcheck/wiki/SC2181
         # shellcheck disable=SC2181
         if [ $? != '0' ]; then
@@ -201,7 +202,7 @@ build_and_release_all () {
     else
         log_term 1 "\nBuild \"nubis-base\" at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        parallel --no-notice --output-as-files --results logs "$0" -vv --non-interactive build '{1}' "${_RELEASE}" "${_SKIP_SETUP}" ::: 'nubis-base'
+        parallel --no-notice --output-as-files --results logs "$0" --non-interactive build '{1}' "${_RELEASE}" ::: 'nubis-base'
         # https://github.com/koalaman/shellcheck/wiki/SC2181
         # shellcheck disable=SC2181
         if [ $? != '0' ]; then
@@ -220,7 +221,7 @@ build_and_release_all () {
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         log_term 1 "\nBuild and Release \"${#REPOSITORY_BUILD_ARRAY[*]}\" repositories at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        parallel --no-notice --output-as-files --results logs --progress --jobs "${#REPOSITORY_BUILD_ARRAY[@]}" "$0" -vv --non-interactive build-and-release '{1}' "${_RELEASE}"  "${_SKIP_SETUP}" ::: "${REPOSITORY_BUILD_ARRAY[@]}"; _RV=$?
+        parallel --no-notice --output-as-files --results logs --progress --jobs "${#REPOSITORY_BUILD_ARRAY[@]}" "$0" --non-interactive build-and-release '{1}' "${_RELEASE}" ::: "${REPOSITORY_BUILD_ARRAY[@]}"; _RV=$?
         if [ ${_RV:-0} != '0' ]; then
             log_term 0 "\n!!!!! ${_RV} builds failed failed. Inspect output logs. !!!!!" -e
         fi; unset _RV
@@ -229,7 +230,7 @@ build_and_release_all () {
     else
         log_term 1 "\nBuild \"${#REPOSITORY_BUILD_ARRAY[*]}\" repositories at \"${_RELEASE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        parallel --no-notice --output-as-files --results logs --progress --jobs "${#REPOSITORY_BUILD_ARRAY[@]}" "$0" -vv --non-interactive build '{1}' "${_RELEASE}" ::: "${REPOSITORY_BUILD_ARRAY[@]}"; _RV=$?
+        parallel --no-notice --output-as-files --results logs --progress --jobs "${#REPOSITORY_BUILD_ARRAY[@]}" "$0" --non-interactive build '{1}' "${_RELEASE}" ::: "${REPOSITORY_BUILD_ARRAY[@]}"; _RV=$?
         if [ ${_RV:-0} != '0' ]; then
             log_term 0 "\n!!!!! ${_RV} builds failed failed. Inspect output logs. !!!!!" -e
         fi; unset _RV

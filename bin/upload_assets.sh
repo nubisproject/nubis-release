@@ -150,14 +150,10 @@ push-lambda () {
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
         # Ensure the repository exists in the repository path
-        if [ ! -d "${REPOSITORY_PATH}"/"${LAMBDA_FUNCTION}" ]; then
-            log_term 1 "Repository '${LAMBDA_FUNCTION}' not cheked out out in repository path '${REPOSITORY_PATH}'!"
-            log_term 1 "\nCloning repository: \"${LAMBDA_FUNCTION}\"." -e
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-
-            cd "${REPOSITORY_PATH}" || exit 1
-            clone_repository "${LAMBDA_FUNCTION}"
-        fi
+        # This will check out the develop or patch branch
+        log_term 1 "\nCloning repository: \"${LAMBDA_FUNCTION}\"." -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        clone_repository "${LAMBDA_FUNCTION}" || exit 1
 
         # Run 'nom update' for the lambda function
         update-lambda-dependencies "${LAMBDA_FUNCTION}"
