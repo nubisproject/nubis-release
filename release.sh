@@ -54,6 +54,16 @@ if [ "${SET_X:-NULL}" != 'NULL' ]; then
     set -x
 fi
 
+# If we set verbosity and are in a sub-call, reset for sub-shell
+if [ "${VERBOSE_INTERNAL:-NULL}" != 'NULL' ]; then
+    set -x
+fi
+
+# If we set terminal echo and are in a sub-call, reset for sub-shell
+if [ "${VERBOSE_TERMINAL:-NULL}" != 'NULL' ]; then
+    set -x
+fi
+
 # Source the variables file
 if [ -f ./variables.sh ]; then
     log_term 2 "Sourcing: ./variables.sh"
@@ -106,7 +116,6 @@ instructions () {
     echo "RELEASE='v2.x.0-dev' # For the next release"
     echo "$0 create-milestones \${RELEASE}"
     echo "$0 --non-interactive -vv build-all \${RELEASE}"
-    echo "$0 --non-interactive -vv upload-assets --multi-region --release \${RELEASE} push-lambda"
 
     echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
     echo "rvm use 2.1"
@@ -255,22 +264,19 @@ while [ "$1" != "" ]; do
         build-and-release )
             REPOSITORY="${2}"
             RELEASE="${3}"
-            SKIP_SETUP="${4}"
             source_files
-            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
-                # Set up release
-                log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
-                log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                if ! "$0" setup-release "${REPOSITORY}" "${RELEASE}" ; then
-                    log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
-                    log_term 0 "Aborting....."
-                    exit 1
-                fi
+            # Set up release
+            log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            if ! "$0" setup-release "${REPOSITORY}" "${RELEASE}" ; then
+                log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
+                log_term 0 "Aborting....."
+                exit 1
             fi
             # Build the AMI
             log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            if ! "$0" build "${REPOSITORY}" "${RELEASE}" ; then
+            if ! "$0" build "${REPOSITORY}" "${RELEASE}" 'SKIP_CLONE' ; then
                 log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
@@ -329,11 +335,8 @@ while [ "$1" != "" ]; do
         release )
             REPOSITORY="${2}"
             RELEASE="${3}"
-            SKIP_SETUP="${4}"
             source_files
-            if [ "${SKIP_SETUP:-NULL}" == 'NULL' ]; then
-                $0 setup-release "${REPOSITORY}" "${RELEASE}"
-            fi
+            $0 setup-release "${REPOSITORY}" "${RELEASE}"
             $0 complete-release "${REPOSITORY}" "${RELEASE}"
             GOT_COMMAND=1
         ;;
