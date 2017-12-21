@@ -412,7 +412,6 @@ while [ "$1" != "" ]; do
         generate-csv )
             setup_main_command
             RELEASE="${2}"
-        echo ${MAIN_EXEC[@]}
             "${MAIN_EXEC[@]}" generate-csv "${RELEASE_DATES}"
             GOT_COMMAND=1
         ;;
