@@ -3,9 +3,9 @@
 .git
 Dockerfile
 License
-bin/
 logs/
 nubis/
+! nubis/docker
 release.sh
 variables_local.sh
 variables_local.sh-dist
