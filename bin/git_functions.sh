@@ -25,7 +25,6 @@
 # If called with a number of calls required, will block until that number is available,
 #+ otherwise defaults to 20 available calls.
 # Example Usage: github_api_limit_check '50'
-# echo 'https://nubis-automation:d6ea175001241dbd405809338073ce3e38a45386@github.com' >> ~/.git-credentials
 github_api_limit_check () {
     local _LIMIT_REQUESTED _DEFAULT_REQUESTED _LIMIT_REMAINING _SLEEP_SECONDS
     _LIMIT_REQUESTED="${1}"
