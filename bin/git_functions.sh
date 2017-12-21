@@ -203,7 +203,7 @@ collect_data () {
 generate_release_csv () {
     local -r RELEASE_DATES="${1}"
     local _CSV_FILE="${2}"
-    if [ ${RELEASE_DATES:-'NULL'} == 'NULL' ]; then
+    if [ "${RELEASE_DATES:-'NULL'}" == 'NULL' ]; then
         log_term 0 "\nYou must pass in the release dates to generate the CSV file." -e
         exit 1
     fi
@@ -270,7 +270,7 @@ clone_repository () {
     log_term 2 "Looking up repository clone_url"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     GITHUB_URL=$(curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" "https://api.github.com/repos/${GITHUB_ORGINIZATION}/${_REPOSITORY}" | jq --raw-output '.clone_url')
-    if [ ${GITHUB_URL} == 'null' ]; then
+    if [ "${GITHUB_URL}" == 'null' ]; then
         log_term 0 "Unable to look up clone-url from GitHub. Aborting..."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
@@ -451,7 +451,7 @@ get_set_milestone () {
 create_milestones () {
     local _RELEASE="${1}"
     shift
-    declare -a MILESTONE_REPOSITORY_ARRAY="${@}"
+    declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae nubber required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -473,7 +473,7 @@ create_milestones () {
 close_milestones () {
     local _RELEASE="${1}"
     shift
-    declare -a MILESTONE_REPOSITORY_ARRAY="${@}"
+    declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae nubber required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -731,9 +731,9 @@ generate_changelog () {
     local _REQUESTS_PER_PAGE _TAG_PAGE_COUNT _ISSUES_PAGE_COUNT _API_REQUEST_COUNT
     _REQUESTS_PER_PAGE='100'
     _TAG_PAGE_COUNT=$(( (61 + 140 + 100 - 1) / 100 ))
-    _ISSUES_PAGE_COUNT=$(( (${_ISSUE_COUNT} + ${_PULL_REQUEST_COUNT} + ${_REQUESTS_PER_PAGE} - 1) / ${_REQUESTS_PER_PAGE} ))
+    _ISSUES_PAGE_COUNT=$(( (_ISSUE_COUNT + _PULL_REQUEST_COUNT + _REQUESTS_PER_PAGE - 1) / _REQUESTS_PER_PAGE ))
     COUNT=$(( 3 + 1 + 20 + (61 * 2) + (140 * 2) ))
-    _API_REQUEST_COUNT=$(( ${_TAG_PAGE_COUNT} + ${_ISSUES_PAGE_COUNT} + ${_TAG_COUNT} + (${_ISSUE_COUNT} * 2) + (${_PULL_REQUEST_COUNT} *2) ))
+    _API_REQUEST_COUNT=$(( _TAG_PAGE_COUNT + _ISSUES_PAGE_COUNT + _TAG_COUNT + (_ISSUE_COUNT * 2) + (_PULL_REQUEST_COUNT *2) ))
     log_term 2 "Calculated ${_API_REQUEST_COUNT} api requests for ghangelog generation"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 

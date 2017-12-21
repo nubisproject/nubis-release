@@ -6,7 +6,7 @@ set -o pipefail
 shopt -s extglob
 
 # Set up our path for later use
-SCRIPT_PATH="$PWD"
+export SCRIPT_PATH="$PWD"
 
 # This function sets up logging, debugging and terminal output on std error
 # Level 0 is always logged
@@ -94,7 +94,7 @@ source_files () {
 
 release_stats () {
     local -r RELEASE_DATES="${2}"
-    if [ ${RELEASE_DATES:-'NULL'} == 'NULL' ]; then
+    if [ "${RELEASE_DATES:-'NULL'}" == 'NULL' ]; then
         log_term 0 "\nYou must pass in the release dates to get accurate links with this function." -e
         exit 1
     fi
@@ -266,7 +266,7 @@ while [ "$1" != "" ]; do
             shift 2
             declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
             source_files || exit 1
-            close_milestones "${RELEASE}"
+            close_milestones "${RELEASE}" "${MILESTONE_REPOSITORY_ARRAY[@]}"
             GOT_COMMAND=1
         ;;
         complete-release )
@@ -281,7 +281,7 @@ while [ "$1" != "" ]; do
             shift 2
             declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
             source_files || exit 1
-            create_milestones "${RELEASE}"
+            create_milestones "${RELEASE}" "${MILESTONE_REPOSITORY_ARRAY[@]}"
             GOT_COMMAND=1
         ;;
         edit )

@@ -66,7 +66,7 @@ fi
 
 # Set up the main.sh command
 setup_main_command () {
-    if [ ${USE_DOCKER:-'NULL'} == NULL ]; then
+    if [ "${USE_DOCKER:-'NULL'}" == NULL ]; then
         declare -a MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     else
         declare -a DOCKER_COMMAND=( 'docker' 'run' '-it' '-v' '/var/run/docker.sock:/var/run/docker.sock' 'nubis-release' )
@@ -93,7 +93,7 @@ upload_lambda_functions () {
         "${MAIN_EXEC[@]}" help
         exit 1
     fi
-    cd "${SCRIPT_PATH}/bin"
+    cd "${SCRIPT_PATH}/bin" || exit 1
     # Bundle, Upload and Release all lambda functions
     local _COUNT=1
     # https://github.com/koalaman/shellcheck/wiki/SC2153
@@ -132,12 +132,12 @@ release_no_build_repositories () {
         "${MAIN_EXEC[@]}" help
         exit 1
     fi
-    cd "${SCRIPT_PATH}/bin"
+    cd "${SCRIPT_PATH}/bin" || exit 1
 
     local -r _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
     if [ "${_SKIP_RELEASE:-NULL}" == 'NULL' ]; then
         local _COUNT=1
-        for REPOSITORY in ${RELEASE_REPOSITORIES[@]}; do
+        for REPOSITORY in "${RELEASE_REPOSITORIES[@]}"; do
             log_term 1 "\nReleasing repository \"${REPOSITORY}\" at \"${_RELEASE}\". (${_COUNT} of ${#RELEASE_REPOSITORIES[*]})" -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             if ! "${MAIN_EXEC[@]}" release "${REPOSITORY}" "${RELEASE}" ; then
@@ -150,6 +150,8 @@ release_no_build_repositories () {
     # This is a special edit to update the pinned version number to 'develop' for terraform modules in nubis-deploy
     #+ We need to do this only if we are building a vX.X.X-dev release (See _RELEASE_REGEX above)
     elif [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
+        # https://github.com/koalaman/shellcheck/wiki/SC1091
+        # shellcheck disable=SC1091
         source edit.sh
         "${MAIN_EXEC[@]}" edit --release "${_RELEASE}" --git-sha 'develop' nubis-deploy
     fi
@@ -166,7 +168,7 @@ release_nubis_base_repository () {
         "${MAIN_EXEC[@]}" help
         exit 1
     fi
-    cd "${SCRIPT_PATH}/bin"
+    cd "${SCRIPT_PATH}/bin" || exit 1
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         COMMAND='build-and-release'
     else
@@ -195,7 +197,7 @@ release_build_repositories () {
         "${MAIN_EXEC[@]}" help
         exit 1
     fi
-    cd "${SCRIPT_PATH}/bin"
+    cd "${SCRIPT_PATH}/bin" || exit 1
     if [ "${_SKIP_RELEASE:-NULL}" == "NULL" ]; then
         COMMAND='build-and-release'
     else
