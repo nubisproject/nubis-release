@@ -67,10 +67,10 @@ fi
 # Set up the main.sh command
 setup_main_command () {
     if [ "${USE_DOCKER:-'NULL'}" == NULL ]; then
-        declare -a MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     else
         declare -a DOCKER_COMMAND=( 'docker' 'run' '-it' '-v' '/var/run/docker.sock:/var/run/docker.sock' 'nubis-release' )
-        declare -a MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     fi
     AWS_VAULT_EXEC_MAIN=( "${AWS_VAULT_EXEC[@]}" "${MAIN_EXEC[@]}" )
 }
@@ -227,7 +227,7 @@ build_and_release_all () {
     # Upload lambda functions
     log_term 1 "\nUploading Lambda functions" -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-#    upload_lambda_functions "${_RELEASE}" "${S3_BUCKET}" "${_SKIP_RELEASE}"
+    upload_lambda_functions "${_RELEASE}" "${S3_BUCKET}" "${_SKIP_RELEASE}"
 
     # Release repositories with no AMI build requirement
     log_term 1 "\nReleasing repositories with no AMI build requirement" -e
@@ -412,13 +412,14 @@ while [ "$1" != "" ]; do
         generate-csv )
             setup_main_command
             RELEASE="${2}"
+        echo ${MAIN_EXEC[@]}
             "${MAIN_EXEC[@]}" generate-csv "${RELEASE_DATES}"
             GOT_COMMAND=1
         ;;
         get-release-stats )
             setup_main_command
             # NOTE: RELEASE_DATES set in local variables file
-            "${MAIN_EXEC[@]}" --get-release-stats "${RELEASE_DATES}"
+            "${MAIN_EXEC[@]}" get-release-stats "${RELEASE_DATES}"
             GOT_COMMAND=1
         ;;
         upload-lambda )
