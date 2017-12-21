@@ -1,9 +1,10 @@
 #!/bin/bash
 
 testing () {
-    echo "testing"
+    echo "Start Testing"
 
-    get_repositories
-    echo "${REPOSITORY_LIST_ARRAY[*]}"
+    github_api_limit_check '50'
+
+    echo "Done Testing"
 }
 

@@ -3,14 +3,14 @@
 # Here are all of the functions to edit various files during a release
 #
 
-# Update project_versoin to the current release
+# Update project_version to the current release
 edit_project_json () {
     local _RELEASE="${1}"
     local _REPOSITORY="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        $0 help
+        $0 edit help
         exit 1
     fi
     test_for_jq
@@ -49,13 +49,13 @@ edit_project_json () {
 
 # This is a special edit to update the pinned version number to the current $RELEASE for the consul and vpc modules in nubis-deploy
 edit_deploy_templates () {
-    local _RELEASE="${1}"
-    local _GIT_SHA="${2}"
+    local -r _RELEASE="${1}"
+    local -r _GIT_SHA="${2}"
     local _REF
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        $0 help
+        $0 edit help
         exit 1
     fi
     if [ "${_GIT_SHA:-NULL}" == 'NULL' ]; then
@@ -97,18 +97,61 @@ edit_deploy_templates () {
     cd "${ENTRY_PWD}" || exit 0
 }
 
-# This function is depricated as nubis-builder is on its own release cadance now
-# This is a special edit to update the pinned version number to the current $RELEASE for nubis-ci
-# edit_ci_template () {
-#     local _RELEASE="${1}"
-#     if [ ${_RELEASE:-NULL} == 'NULL' ]; then
-#         log_term 0 "Relesae number required"
-#         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-#         $0 help
-#         exit 1
-#     fi
-#
-#     local _CI_FILE="${REPOSITORY_PATH}/nubis-ci/nubis/puppet/builder.pp"
-#
-#     sed -i "s:revision => 'v[0-9].[0-9].[0-9]*',:revision => '${_RELEASE}',:g" "${_CI_FILE}"
-# }
+modify () {
+    # Grab and setup called options
+    while [ "$1" != "" ]; do
+        case $1 in
+            -gs | --git-sha )
+                # Specify a git sha to use as the current release
+                GIT_SHA="${2}"
+                shift
+            ;;
+            -p | --path )
+                # The path to where repository is checked out
+                REPOSITORY_PATH="${2}"
+                shift
+            ;;
+            -r | --release )
+                # Specify a release number for the current release
+                RELEASE="${2}"
+                shift
+            ;;
+            -R | --repository )
+                # Specify a repository to edit project.json
+                REPOSITORY="${2}"
+                shift
+            ;;
+            -h | -H | --help )
+                echo -en "\n$0\n\n"
+                echo -en "Usage: $0 edit --release 'vX.X.X' [options] command\n\n"
+                echo -en "Commands:\n"
+                echo -en "  nubis-deploy    Edit version string for files in nubis-deploy\n"
+                echo -en "  project-json    Edit JSON file for current project\n\n"
+                echo -en "Options:\n"
+                echo -en "  --help         -h    Print this help information and exit\n"
+                echo -en "  --path         -p    The path to where repository is checked out\n"
+                echo -en "  --release      -r    Specify a release number for the current release\n"
+                echo -en "  --repository   -R    Specify a repository to edit project.json\n"
+                echo -en "  --git-sha      -gs   Specify a git sha to use as the current release\n"
+                echo -en "                         This overrides the release number in nubis-deploy only\n\n"
+                exit 0
+            ;;
+            nubis-deploy )
+                # Edit version string for files in nubis-deploy
+                edit_deploy_templates "${RELEASE}" "${GIT_SHA}"
+                GOT_COMMAND=1
+            ;;
+            project-json )
+                # Edit JSON file for current project
+                edit_project_json "${RELEASE}" "${REPOSITORY}"
+                GOT_COMMAND=1
+            ;;
+        esac
+        shift
+    done
+
+    # If we did not get a valid command print the help message
+    if [ ${GOT_COMMAND:-0} == 0 ]; then
+        $0 edit --help
+    fi
+}

@@ -1,0 +1,11 @@
+*.md
+#!README.md
+.git
+Dockerfile
+License
+bin/
+logs/
+nubis/
+release.sh
+variables_local.sh
+variables_local.sh-dist
