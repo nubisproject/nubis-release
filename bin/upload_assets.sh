@@ -29,7 +29,7 @@ push-files () {
         if [ "${_AWS_DEFAULT_REGION:-NULL}" == 'NULL' ]; then
             _AWS_DEFAULT_REGION='us-west-2'
         fi
-        _S3_BUCKET_REGIONS=$("${AWS_VAULT_COMMAND[@]}" aws --region "${_AWS_DEFAULT_REGION}" ec2 describe-regions --query 'Regions[].{Name:RegionName}' --output text | sort)
+        _S3_BUCKET_REGIONS=$(aws --region "${_AWS_DEFAULT_REGION}" ec2 describe-regions --query 'Regions[].{Name:RegionName}' --output text | sort)
         # https://github.com/koalaman/shellcheck/wiki/SC2181
         # shellcheck disable=SC2181
         if [ "${?}" != '0' ]; then
@@ -75,7 +75,7 @@ push-files () {
         # Upload the file
         for BUCKET in "${_BUCKETS[@]}"; do
             local _BUCKET_REGION _BUCKET_REGION_ARGS _OUT
-            _BUCKET_REGION=$("${AWS_VAULT_COMMAND[@]}" aws s3api get-bucket-location --bucket "${BUCKET}" | jq -r .LocationConstraint)
+            _BUCKET_REGION=$(aws s3api get-bucket-location --bucket "${BUCKET}" | jq -r .LocationConstraint)
             log_term 2 "Got BUCKET_REGION: ${_BUCKET_REGION}"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             if [ "${_BUCKET_REGION:-null}" != "null" ]; then
@@ -85,7 +85,7 @@ push-files () {
             log_term 0 " - Uploading to ${BUCKET}: " -n
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
-            _OUT=$("${AWS_VAULT_COMMAND[@]}" aws "${_BUCKET_REGION_ARGS[@]}" s3api put-object --bucket "${BUCKET}" --acl public-read --content-md5 "${_MD5}" --content-type "${_CONTENT_TYPE}" --key "${_S3_PATH}/${_FILENAME}" --body "${_FILENAME}" 2>&1) 2> /dev/null
+            _OUT=$(aws "${_BUCKET_REGION_ARGS[@]}" s3api put-object --bucket "${BUCKET}" --acl public-read --content-md5 "${_MD5}" --content-type "${_CONTENT_TYPE}" --key "${_S3_PATH}/${_FILENAME}" --body "${_FILENAME}" 2>&1) 2> /dev/null
             # https://github.com/koalaman/shellcheck/wiki/SC2181
             # shellcheck disable=SC2181
             if [ "${?}" != '0' ]; then
@@ -121,10 +121,7 @@ zip-lambda () {
     log_term 0 "Packaging lambda:: ${_LAMBDA_FUNCTION}"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     cd "${REPOSITORY_PATH}"/"${LAMBDA_FUNCTION}" || exit 1
-    zip --quiet --recurse-paths "bundles/${_LAMBDA_FUNCTION}.zip" ./* --exclude bundles/
-    # https://github.com/koalaman/shellcheck/wiki/SC2181
-    # shellcheck disable=SC2181
-    if [ "${?}" != '0' ]; then
+    if ! zip --quiet --recurse-paths "bundles/${_LAMBDA_FUNCTION}.zip" ./* --exclude bundles/ ; then
         log_term 0 "ERROR: 'zip' failed for lambda function ${_LAMBDA_FUNCTION}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
@@ -141,7 +138,7 @@ push-lambda () {
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        $0 help
+        $0 upload-assets help
         exit 1
     fi
 
@@ -149,13 +146,16 @@ push-lambda () {
         log_term 0 "Pushing lambda: ${LAMBDA_FUNCTION}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
-        # Ensure the repository exists in the repository path
-        # This will check out the develop or patch branch
-        log_term 1 "\nCloning repository: \"${LAMBDA_FUNCTION}\"." -e
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        clone_repository "${LAMBDA_FUNCTION}" || exit 1
+        # Skip if we know the checkout already set up
+        if [ "${SKIP_CLONE:-NULL}" == 'NULL' ]; then
+            # Ensure the repository exists in the repository path
+            # This will check out the develop or patch branch
+            log_term 1 "\nCloning repository: \"${LAMBDA_FUNCTION}\"." -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            clone_repository "${LAMBDA_FUNCTION}" || exit 1
+        fi
 
-        # Run 'nom update' for the lambda function
+        # Run 'npm update' for the lambda function
         update-lambda-dependencies "${LAMBDA_FUNCTION}"
 
         # Create the lambda function bundle
@@ -164,7 +164,7 @@ push-lambda () {
         # Push the lambda function zip file to the S3 bucket
         push-files "${REPOSITORY_PATH}/${LAMBDA_FUNCTION}/bundles/${LAMBDA_FUNCTION}.zip" "${_RELEASE}/lambda" "${_S3_BUCKET}" "${_S3_MULTI_REGION}"
 
-        # update-lambda-dependencies fetches dependancies and zip-lambda generates
+        # update-lambda-dependencies fetches dependencies and zip-lambda generates
         #+  new zip file, check them in here unless we are on master or develop
         #+  (assume these are test builds)
         local _CURRENT_BRANCH; _CURRENT_BRANCH=$(git branch | cut -d' ' -f 2)
@@ -184,82 +184,82 @@ push-lambda () {
 }
 
 upload-assets () {
-# Grab and setup called options
-while [ "$1" != "" ]; do
-    case $1 in
-        -b | --bucket )
-            # The name of a s3 bucket to upload files to
-            S3_BUCKET="${2}"
-            shift
-        ;;
-        -r | --release )
-            # The path in the s3 bucket to upload files to
-            # This is intended to support versions of these files
-            # There should be one path per release
-            RELEASE="${2}"
-            S3_PATH="${2}"
-            shift
-        ;;
-        -m | --multi-region )
-            # Should we upload to multiple regions, using <bucket>-<region> naming
-            S3_MULTI_REGION='1'
-        ;;
+    # Grab and setup called options
+    while [ "$1" != "" ]; do
+        case $1 in
+            -b | --bucket )
+                # The name of a s3 bucket to upload files to
+                S3_BUCKET="${2}"
+                shift
+            ;;
+            -r | --release )
+                # The path in the s3 bucket to upload files to
+                # This is intended to support versions of these files
+                # There should be one path per release
+                RELEASE="${2}"
+                S3_PATH="${2}"
+                shift
+            ;;
+            -m | --multi-region )
+                # Should we upload to multiple regions, using <bucket>-<region> naming
+                S3_MULTI_REGION='1'
+            ;;
+            --skip-clone )
+                # Skip cloning repository if it is already set up
+                SKIP_CLONE='TRUE'
+            ;;
+            -h | -H | --help )
+                echo -en "$0\n\n"
+                echo -en "Usage: $0 upload-assets -release 'vX.X.X' [options] command [file]\n\n"
+                echo -en "Commands:\n"
+                echo -en "  push [file]        Push files from the local directory to s3\n"
+                echo -en "                      If file is given push only that file\n"
+                echo -en "                      If no file is given push everything in the directory\n"
+                echo -en "  push-lambda [func] Push lambda functions from the local directory to s3\n"
+                echo -en "                      If function is given push only that function\n"
+                echo -en "                      If no function is given push all functions (set in variables.sh)\n"
+                echo -en "Options:\n"
+                echo -en "  --help         -h    Print this help information and exit\n"
+                echo -en "  --bucket       -b    Specify the s3 bucket to upload to\n"
+                echo -en "  --release      -r    Specify a release number for the current release\n"
+                echo -en "                         This is also the path to place the files into in the s3 bucket\n"
+                echo -en "  --multi-region -m    Upload files to one bucket per region, prefix at --bucket\n"
+                echo -en "                         Defaults to disabled\n"
+                exit 0
+            ;;
+            push )
+                # Push file if named otherwise push everything
+                if [ "${#}" != '0' ]; then
+                    declare -a FILE_LIST=( "${@}" )
+                else
+                    log_term 0 "ERROR: You must specify a file with 'push'\n" -e
+                    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    $0 upload-assets --help
+                    exit 1
+                fi
+                push-files "${FILE_LIST[@]}" "${S3_PATH}" "${S3_BUCKET}" "${S3_MULTI_REGION}"
+                GOT_COMMAND=1
+            ;;
+            push-lambda )
+                # Push function if named otherwise push everything
+                shift
+                if [ "${#}" != '0' ]; then
+                    declare -a LAMBDA_LIST=( "${@}" )
+                else
+                    # https://github.com/koalaman/shellcheck/wiki/SC2153
+                    # shellcheck disable=SC2153
+                    declare -a LAMBDA_LIST=( "${LAMBDA_FUNCTIONS[@]}" )
+                fi
 
-         -h | -H | --help )
-            echo -en "$0\n\n"
-            echo -en "Usage: $0 upload-assets -release 'vX.X.X' [options] command [file]\n\n"
-            echo -en "Commands:\n"
-            echo -en "  push [file]        Push files from the local directory to s3\n"
-            echo -en "                      If file is given push only that file\n"
-            echo -en "                      If no file is given push everything in the directory\n"
-            echo -en "  push-lambda [func] Push lambda functions from the local directory to s3\n"
-            echo -en "                      If function is given push only that function\n"
-            echo -en "                      If no function is given push all functions (set in variables.sh)\n"
-            echo -en "Options:\n"
-            echo -en "  --help         -h    Print this help information and exit\n"
-            echo -en "  --bucket       -b    Specify the s3 bucket to upload to\n"
-            echo -en "                         Defaults to '${S3_BUCKET}'\n"
-            echo -en "  --release      -r    Specify a release number for the current release\n"
-            echo -en "                         This is also the path to place the files into in the s3 bucket\n"
-            echo -en "  --multi-region -m    Upload files to one bucket per region, prefix at --bucket\n"
-            echo -en "                         Defaults to disabled\n"
-            exit 0
-        ;;
-        push )
-            # Push file if named otherwise push everything
-            if [ "${#}" != '0' ]; then
-                declare -a FILE_LIST=( "${@}" )
-            else
-                log_term 0 "ERROR: You must specify a file with 'push'\n" -e
-                log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                $0 upload-assets --help
-                exit 1
-            fi
-            push-files "${FILE_LIST[@]}" "${S3_PATH}" "${S3_BUCKET}" "${S3_MULTI_REGION}"
-            GOT_COMMAND=1
-        ;;
-        push-lambda )
-            # Push function if named otherwise push everything
-            shift
-            if [ "${#}" != '0' ]; then
-                declare -a LAMBDA_LIST=( "${@}" )
-            else
-                # https://github.com/koalaman/shellcheck/wiki/SC2153
-                # shellcheck disable=SC2153
-                declare -a LAMBDA_LIST=( "${LAMBDA_FUNCTIONS[@]}" )
-            fi
+                push-lambda "${RELEASE}" "${LAMBDA_LIST[@]}" "${S3_BUCKET}" "${S3_MULTI_REGION}"
+                GOT_COMMAND=1
+            ;;
+        esac
+        shift
+    done
 
-            push-lambda "${RELEASE}" "${LAMBDA_LIST[@]}" "${S3_BUCKET}" "${S3_MULTI_REGION}"
-            GOT_COMMAND=1
-        ;;
-    esac
-    shift
-done
-
-# If we did not get a valid command print the help message
-if [ ${GOT_COMMAND:-0} == 0 ]; then
-    $0 upload-assets --help
-fi
+    # If we did not get a valid command print the help message
+    if [ ${GOT_COMMAND:-0} == 0 ]; then
+        $0 upload-assets --help
+    fi
 }
-
-# fin

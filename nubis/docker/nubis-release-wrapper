@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd /nubis/nubis-release/bin || exit 1
+
+./main.sh "${@}"

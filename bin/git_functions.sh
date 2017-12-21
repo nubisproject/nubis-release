@@ -21,19 +21,49 @@
 #    * originmaster 017748c [origin/master] Initial commit
 #
 
+# Blocking function to ensure we have enough available API calls to complete a task.
+# If called with a number of calls required, will block until that number is available,
+#+ otherwise defaults to 20 available calls.
+# Example Usage: github_api_limit_check '50'
+# echo 'https://nubis-automation:d6ea175001241dbd405809338073ce3e38a45386@github.com' >> ~/.git-credentials
+github_api_limit_check () {
+    local _LIMIT_REQUESTED _DEFAULT_REQUESTED _LIMIT_REMAINING _SLEEP_SECONDS
+    _LIMIT_REQUESTED="${1}"
+    _DEFAULT_REQUESTED='20'
+
+    while [ "${_LIMIT_REMAINING:-0}" -lt "${_LIMIT_REQUESTED:-$_DEFAULT_REQUESTED}" ]; do
+        log_term 2 "Querying GitHub API for rate limit"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        _LIMIT_REMAINING=$(curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" --request GET https://api.github.com/rate_limit | jq --raw-output '.["resources"]["core"]["remaining"]')
+
+        log_term 2 "Got \"${_LIMIT_REMAINING}\" remaining requests for \"${_LIMIT_REQUESTED:-$_DEFAULT_REQUESTED}\" desired"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+        # If we do not have enough requests remaining, sleep before trying again
+        if [ "${_LIMIT_REMAINING:-0}" -lt "${_LIMIT_REQUESTED:-$_DEFAULT_REQUESTED}" ]; then
+            _SLEEP_SECONDS=10
+            log_term 2 "Sleeping \"${_SLEEP_SECONDS}\" seconds before trying again"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            sleep "${_SLEEP_SECONDS}"
+        fi
+    done
+}
+
 # This function will curl for the GitHub URL passed as ${1}
 # Outputs what curl gets returned
 get_data () {
-    local _GITHUB_URL=${1}
+    local _GITHUB_URL="${1}"
     local _INTERNAL_DATA
-    if [ "${CHANGELOG_GITHUB_TOKEN:-NULL}" == 'NULL' ];then
-        log_term 1 "WARNING: 'CHANGELOG_GITHUB_TOKEN' unset. Data may be incomplete."
+    if [ "${GITHUB_OATH_TOKEN:-NULL}" == 'NULL' ];then
+        log_term 1 "WARNING: 'GITHUB_OATH_TOKEN' unset. Data may be incomplete."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        github_api_limit_check '1'
         _INTERNAL_DATA=$(curl -s "${_GITHUB_URL}")
         log_term 2 "Get date from: \"${_GITHUB_URL}\""
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     else
-        _INTERNAL_DATA=$(curl -s -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" "${_GITHUB_URL}")
+        github_api_limit_check '1'
+        _INTERNAL_DATA=$(curl -s -H "Authorization: token ${GITHUB_OATH_TOKEN}" "${_GITHUB_URL}")
         log_term 2 "Get data from: \"${_GITHUB_URL}\""
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     fi
@@ -62,7 +92,7 @@ get_headers () {
 #             HTTP*) read -r PROTOCOL STATUS MESSAGE <<< "$KEY{$VALUE:+:$VALUE}"
 #                 ;;
         esac
-    done < <(if [ "${CHANGELOG_GITHUB_TOKEN:-NULL}" == 'NULL' ];then curl -sI "${_GITHUB_URL}"; else curl -sI -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" "${_GITHUB_URL}"; fi)
+    done < <(if [ "${GITHUB_OATH_TOKEN:-NULL}" == 'NULL' ];then github_api_limit_check '1'; curl -sI "${_GITHUB_URL}"; else curl -sI -H "Authorization: token ${GITHUB_OATH_TOKEN}" "${_GITHUB_URL}"; fi)
 
     # Clean up
     unset _GITHUB_URL
@@ -164,64 +194,6 @@ collect_data () {
     unset _GITHUB_URL _INTERNAL_DATA
 }
 
-
-# This function gathers the list of repositories belonging to the GitHub orginization.
-# This function should be called only once for any given run
-# Sets: ${REPOSITORY_LIST_ARRAY[*]} ${REPOSITORY_BUILD_ARRAY[*]}  ${REPOSITORY_RELEASE_ARRAY[*]}  ${REPOSITORY_EXCLUDE_ARRAY[*]}
-# Returns: Nothing
-declare -a REPOSITORY_LIST_ARRAY REPOSITORY_BUILD_ARRAY REPOSITORY_RELEASE_ARRAY REPOSITORY_EXCLUDE_ARRAY
-get_repositories () {
-    if [ "${GITHUB_ORGINIZATION:-NULL}" == 'NULL' ]; then
-        log_term 0 "GitHub orginization not defined. Please edit your variables file."
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        exit 1
-    fi
-
-    # Set up GitHub API URL
-    local _GITHUB_URL="https://api.github.com/orgs/${GITHUB_ORGINIZATION}/repos"
-    log_term 1 "Setting _GITHUB_URL to: \"${_GITHUB_URL}\""
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-
-    # Collect the JSON list of repositories
-    local _REPOSITORY_LIST; _REPOSITORY_LIST=$(collect_data "${_GITHUB_URL}")
-    log_term 2 "Collecting _REPOSITORY_LIST"
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-
-    # Parse out only the name and sort
-    local _PARSE_REPOSITORY_LIST; _PARSE_REPOSITORY_LIST=$(echo "${_REPOSITORY_LIST}" | jq -r '.[].name' | sort)
-    log_term 2 "Parsing and sorting _REPOSITORY_LIST"
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-
-    # Format the list into an array
-    for REPO in ${_PARSE_REPOSITORY_LIST}; do
-        REPOSITORY_LIST_ARRAY=( ${REPOSITORY_LIST_ARRAY[*]} ${REPO} )
-        log_term 3 "REPOSITORY_LIST_ARRAY=${REPOSITORY_LIST_ARRAY[*]}"
-    done
-    log_term 1 "Found ${#REPOSITORY_LIST_ARRAY[*]} repositories: ${REPOSITORY_LIST_ARRAY[*]}"
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-
-    # Set up REPOSITORY_BUILD_ARRAY REPOSITORY_RELEASE_ARRAY REPOSITORY_EXCLUDE_ARRAY
-    for REPOSITORY in ${REPOSITORY_LIST_ARRAY[*]}; do
-        if [[ "${REPOSITORY}" =~ (${BUILD_REPOSITORIES}) ]] && [[ ! "${REPOSITORY}" =~ (${EXCLUDE_REPOSITORIES}) ]]; then
-            log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_BUILD_ARRAY."
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            REPOSITORY_BUILD_ARRAY=( ${REPOSITORY_BUILD_ARRAY[*]} ${REPOSITORY} )
-        elif [[ "${REPOSITORY}" =~ (${RELEASE_REPOSITORIES}) ]] && [[ ! "${REPOSITORY}" =~ (${EXCLUDE_REPOSITORIES}) ]]; then
-            log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_RELEASE_ARRAY."
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            REPOSITORY_RELEASE_ARRAY=( ${REPOSITORY_RELEASE_ARRAY[*]} ${REPOSITORY} )
-        else
-            log_term 2 "Adding \"${REPOSITORY}\" to REPOSITORY_EXCLUDE_ARRAY."
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            REPOSITORY_EXCLUDE_ARRAY=( ${REPOSITORY_EXCLUDE_ARRAY[*]} ${REPOSITORY} )
-        fi
-    done
-    log_term 1 "Building ${#REPOSITORY_BUILD_ARRAY[*]} repositories: ${REPOSITORY_BUILD_ARRAY[*]}"
-    log_term 1 "Releasing ${#REPOSITORY_RELEASE_ARRAY[*]} repositories: ${REPOSITORY_RELEASE_ARRAY[*]}"
-    log_term 1 "Excluding ${#REPOSITORY_EXCLUDE_ARRAY[*]} repositories: ${REPOSITORY_EXCLUDE_ARRAY[*]}"
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-}
-
 # This function generates a list of all of the GitHub issues closed for the release.
 # Both ${GITHUB_ORGINIZATION} and ${RELEASE_DATES} must be set (see variables.sh)
 # Optionaly a file-name may be passed in, otherwise a default file is created in /tmp
@@ -229,7 +201,12 @@ get_repositories () {
 # Requires two external dependancies: 'jq' and 'json2csv'
 # OUTPUTS: A CSV formatted file in ${CSV_FILE}
 generate_release_csv () {
-    local _CSV_FILE="${1}"
+    local -r RELEASE_DATES="${1}"
+    local _CSV_FILE="${2}"
+    if [ ${RELEASE_DATES:-'NULL'} == 'NULL' ]; then
+        log_term 0 "\nYou must pass in the release dates to generate the CSV file." -e
+        exit 1
+    fi
     if [ "${_CSV_FILE:-NULL}" == "NULL" ]; then
         _CSV_FILE="./logs/nubis-release-$RELEASE_DATES.csv"
     fi
@@ -245,7 +222,7 @@ generate_release_csv () {
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
     # Parse out only the info we will report on about
-    local _PARSE_ISSUE_LIST; _PARSE_ISSUE_LIST=$(echo "${_ISSUE_LIST}" | jq -c '.["items"][] | {title: .title, html_url: .html_url, user: .user.login}')
+    local _PARSE_ISSUE_LIST; _PARSE_ISSUE_LIST=$(echo "${_ISSUE_LIST}" | jq --compact-output '.["items"][] | {title: .title, html_url: .html_url, user: .user.login}')
     log_term 2 "Parsing _ISSUE_LIST"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
@@ -289,8 +266,20 @@ clone_repository () {
 
     fi
     cd "${REPOSITORY_PATH}" || exit 1
-    SSH_URL=$(curl -s "https://api.github.com/repos/${GITHUB_ORGINIZATION}/${_REPOSITORY}" | jq -r '.ssh_url')
-    git clone "${SSH_URL}" || exit 1
+    github_api_limit_check '1'
+    log_term 2 "Looking up repository clone_url"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    GITHUB_URL=$(curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" "https://api.github.com/repos/${GITHUB_ORGINIZATION}/${_REPOSITORY}" | jq --raw-output '.clone_url')
+    if [ ${GITHUB_URL} == 'null' ]; then
+        log_term 0 "Unable to look up clone-url from GitHub. Aborting..."
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+    log_term 3 "got clone_url \"${GITHUB_URL}\""
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    log_term 2 "Cloning repository with url \"${GITHUB_URL}\""
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    git clone "${GITHUB_URL}" || exit 1
     cd "${_REPOSITORY}" || exit 1
     # If a patch version was specified check out at that release.
     #+ If the repository has a patch branch, check out that branch.
@@ -299,14 +288,22 @@ clone_repository () {
     if [ "${RELEASE_TO_PATCH:-NULL}" != 'NULL' ]; then
         local _PATCH_BRANCH_TEST; _PATCH_BRANCH_TEST=$(git branch -r --list "origin/patch-${RELEASE_TO_PATCH:-NULL}")
         if [ "${#_PATCH_BRANCH_TEST}" != 0 ]; then
+            log_term 2 "Checking out \"patch-${RELEASE_TO_PATCH}\" branch"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             git checkout "patch-${RELEASE_TO_PATCH}" || exit 1
         else
+            log_term 2 "Checking out \"${RELEASE_TO_PATCH}\" branch"
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             git checkout "${RELEASE_TO_PATCH}" || exit 1
         fi
     else
+        log_term 2 "Checking out \"develop\" branch"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         git checkout develop || exit 1
     fi
     # Grab any submodules
+    log_term 2 "Updating git submodules"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     git submodule update --init --recursive || exit 1
 }
 
@@ -334,9 +331,15 @@ create_release_branch () {
     # Check to see if the branch already exists
     BRANCH_EXISTS=$(git branch -a | grep -c "release-${_RELEASE}")
     # If no branch exists, create it and push the remote tracking branch
-    if [ "${BRANCH_EXISTS}" == 0 ]; then
+    if [ "${BRANCH_EXISTS:-0}" == 0 ]; then
+        log_term 2 "Checking out new branch \"release-${_RELEASE}\""
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         git checkout -b "release-${_RELEASE}" || exit 1
+        log_term 2 "Updating submodules for branch \"release-${_RELEASE}\""
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         git submodule update --init --recursive || exit 1
+        log_term 2 "Setting upstream for branch \"release-${_RELEASE}\""
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         git push --set-upstream origin "release-${_RELEASE}" || exit 1
     # If we get only one
     elif [ "${BRANCH_EXISTS}" == 1 ]; then
@@ -344,6 +347,8 @@ create_release_branch () {
         BRANCH_REMOTE=$(git branch -a | grep -c "/release-${_RELEASE}")
         # If not, assume it is local and attempt to set upstream tracking
         if [ "${BRANCH_REMOTE}" == 0 ]; then
+            log_term 2 "Attempting to set upstream for existing branch \"release-${_RELEASE}\""
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             git push --set-upstream origin "release-${_RELEASE}" || exit 1
         # If it is remote, error out for manual correction
         else
@@ -356,9 +361,13 @@ create_release_branch () {
     # If we get two or more lets log a warning and continue
     #+ In this case I am assuming a re-release of an aborted release
     #+ Best bet is to check out the brranch anyhow and continue
-    #+ If this assumption proves to be false, further logic may need to be ncluded here
+    #+ If this assumption proves to be false, further logic may need to be included here
     else
+        log_term 2 "Checking out new branch \"release-${_RELEASE}\""
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         git checkout "release-${_RELEASE}" || exit 1
+        log_term 2 "Updating submodules for branch \"release-${_RELEASE}\""
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         git submodule update --init --recursive || exit 1
         log_term 0 "Local and remote branches 'release-${_RELEASE}' exists for '${_REPOSITORY}'"
         log_term 0 "Attempting to continue with unknown consequences."
@@ -395,9 +404,11 @@ delete_release_branch () {
 # Returns (as echo) milestone number or "NULL'
 get_set_milestone () {
     milestone_open () {
+        github_api_limit_check '1'
         ghi milestone --list -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_MILESTONE}" | cut -d':' -f 1 | sed -e 's/^[[:space:]]*//'
     }
     milestone_closed () {
+        github_api_limit_check '1'
         ghi milestone --list --closed -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_MILESTONE}" | cut -d':' -f 1 | sed -e 's/^[[:space:]]*//'
     }
     test_for_ghi
@@ -422,11 +433,15 @@ get_set_milestone () {
     #+ else, assume we are creating and open a milestone
     if [ "${_MILESTONE_NUMBER_OPEN:-NULL}" != 'NULL' ] && [ "${_CLOSE_MILESTONE:-NULL}" != 'NULL'  ]; then
         log_term 0 "Closing milestone ${_MILESTONE_NUMBER} for ${_REPOSITORY}"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        github_api_limit_check '1'
         _MILESTONE_NUMBER=$(ghi milestone --state closed "${_MILESTONE_NUMBER}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"  | cut -s -d'#' -f 2 | cut -d':' -f 1)
     # Finally create the milestone as it does not appear to exist
     #+ Do not crete if we are closing
     elif [ "${_MILESTONE_NUMBER:-NULL}" == 'NULL' ] && [ "${_CLOSE_MILESTONE:-NULL}" == 'NULL'  ]; then
         log_term 0 "Creating milestone ${_MILESTONE} for ${_REPOSITORY}"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        github_api_limit_check '1'
         _MILESTONE_NUMBER=$(ghi milestone --message "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"  | cut -d'#' -f 2 | cut -d' ' -f 1)
     fi
     echo "${_MILESTONE_NUMBER}"
@@ -435,14 +450,14 @@ get_set_milestone () {
 
 create_milestones () {
     local _RELEASE="${1}"
+    shift
+    declare -a MILESTONE_REPOSITORY_ARRAY="${@}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae nubber required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
     fi
-    get_repositories
-    declare -a MILESTONE_REPOSITORY_ARRAY=( 'nubis-base' ${REPOSITORY_BUILD_ARRAY[*]} ${REPOSITORY_RELEASE_ARRAY[*]} )
     local _COUNT=1
     for REPOSITORY in ${MILESTONE_REPOSITORY_ARRAY[*]}; do
         log_term 1 "\nCreating milestone in \"${REPOSITORY}\". (${_COUNT} of ${#MILESTONE_REPOSITORY_ARRAY[*]})" -e
@@ -457,14 +472,14 @@ create_milestones () {
 
 close_milestones () {
     local _RELEASE="${1}"
+    shift
+    declare -a MILESTONE_REPOSITORY_ARRAY="${@}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae nubber required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
     fi
-    get_repositories
-    declare -a MILESTONE_REPOSITORY_ARRAY=( 'nubis-base' ${REPOSITORY_BUILD_ARRAY[*]} ${REPOSITORY_RELEASE_ARRAY[*]} )
     local _COUNT=1
     for REPOSITORY in ${MILESTONE_REPOSITORY_ARRAY[*]}; do
         log_term 1 "\nClosing milestone in \"${REPOSITORY}\". (${_COUNT} of ${#MILESTONE_REPOSITORY_ARRAY[*]})" -e
@@ -484,8 +499,10 @@ get_release_issue () {
     local _MILESTONE="${3}"
     local _ISSUE_NUMBER
     if [ "${_MILESTONE:-NULL}" == 'NULL' ]; then
+        github_api_limit_check '1'
         _ISSUE_NUMBER=$(ghi list --state open --no-pulls -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_ISSUE_TITLE}" | cut -d ' ' -f 3)
     else
+        github_api_limit_check '1'
         _ISSUE_NUMBER=$(ghi list --state open --no-pulls --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_ISSUE_TITLE}" | cut -d ' ' -f 3)
     fi
     log_term 1 "Got release issue number(s): \"${_ISSUE_NUMBER}\"."
@@ -527,8 +544,10 @@ file_issue () {
         log_term 2 "Release issue exists. Returned: '${_ISSUE_EXISTS}'. Skipping 'file_issue'."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     elif [ "${_MILESTONE:-NULL}" == 'NULL' ]; then
+        github_api_limit_check '1'
         ghi open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
     else
+        github_api_limit_check '1'
         ghi open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
     fi
 }
@@ -549,6 +568,7 @@ close_issue () {
         log_term 1 "Warning: 'get_release_issue' returned: '${_ISSUE_NUMBER}'. Skipping 'close_issue'."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     else
+        github_api_limit_check '1'
         ghi close --message "${_ISSUE_COMMENT}" "${_ISSUE_NUMBER}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"
     fi
 }
@@ -618,14 +638,266 @@ EOH
         log_term 1 "\nSetting repository permissions to enable branch protection for \"${_REPOSITORY}/${_BRANCH}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         # Set restrictions on the named branch to require pull-requests
-        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${UPDATE_BRANCH_PROTECTION}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
+        github_api_limit_check '1'
+        curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request PUT --data-binary "${UPDATE_BRANCH_PROTECTION}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
     else
         log_term 1 "\nSetting repository permissions to disable branch protection for \"${_REPOSITORY}/${_BRANCH}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         # Set restrictions on the named branch to require pull-requests
-        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
+        github_api_limit_check '1'
+        curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" -H "Accept: application/vnd.github.loki-preview+json" -H 'Content-Type: application/json' --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/branches/"${_BRANCH}"/protection > /dev/null 2>&1
     fi
 
+}
+
+generate_changelog () {
+    test_for_github_changelog_generator
+    local _REPOSITORY="${1}"
+    local _RELEASE="${2}"
+    if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
+        log_term 0 "Repository required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
+        log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    if [ ${#GITHUB_OATH_TOKEN} == 0 ]; then
+        log_term 0 "You must have \${GITHUB_OATH_TOKEN} set"
+        log_term 0 'https://github.com/skywinder/github-changelog-generator#github-token'
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+    # Ensure the repository exists in the repository path
+    if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
+        log_term 0 "Repository '${_REPOSITORY}' not chekced out out in repository path '${REPOSITORY_PATH}'!"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+    cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
+
+    # Update the CHANGELOG and make a pull-request, rebasing first to ensure a clean repository
+    # Start by counting issues, pull-requests and tags. Then do some math in an attempt to
+    #+ get clost to the number of API requests required.
+
+    # Count the number of tags in the repository
+    local _TAG_COUNT; _TAG_COUNT=$(git tag -l | grep -c ^)
+    log_term 2 "Found ${_TAG_COUNT} tags"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Set up GitHub API URL for searching closed issues in this repository
+    local _GITHUB_URL="https://api.github.com/search/issues?q=is:issue+sort:created-desc+is:closed+repo:${GITHUB_ORGINIZATION}/${_REPOSITORY}"
+    log_term 1 "Setting _GITHUB_URL to: \"${_GITHUB_URL}\""
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Collect the JSON list of issues
+    local _ISSUE_LIST; _ISSUE_LIST=$(collect_data "${_GITHUB_URL}")
+    log_term 2 "Collecting _ISSUE_LIST"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Count the number of closed issues in the repository
+    local _ISSUE_COUNT; _ISSUE_COUNT=$(echo "${_ISSUE_LIST}" | jq --compact-output '.["items"][].number' | grep -c ^)
+    log_term 2 "Found ${_ISSUE_COUNT} issues"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Set up the GtHub API URL for searching merged pull-requests
+    local _GITHUB_URL="https://api.github.com/search/issues?q=is:pr+sort:created-desc+is:merged+repo:${GITHUB_ORGINIZATION}/${_REPOSITORY}"
+    log_term 1 "Setting _GITHUB_URL to: \"${_GITHUB_URL}\""
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Collect the JSON list of pull-requests
+    local _PULL_REQUEST_LIST; _PULL_REQUEST_LIST=$(collect_data "${_GITHUB_URL}")
+    log_term 2 "Collecting _PULL_REQUEST_LIST"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Count the number of merged pull-requests in the repository
+    local _PULL_REQUEST_COUNT; _PULL_REQUEST_COUNT=$(echo "${_PULL_REQUEST_LIST}" | jq --compact-output '.["items"][].number' | grep -c ^)
+    log_term 2 "Found ${_PULL_REQUEST_COUNT} pull-requests"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Add up all API requests to pass to the limit_check function
+    # Adds up the requests in the following way:
+    #+ Queries to page through pull-requests and tags (100 results per page)
+    #+ Tags (one query per tag for date created)
+    #+ Issues (One query per issue and one query for closed date)
+    #+ Pull-Requests (One query per merged request and one query for merged time)
+    # This does not account for issues that are filtered out based on tags,
+    #+ therefore this number is slightly higher that tha actual required number,
+    #+ but close enough without making all the queries ourselves.
+    local _REQUESTS_PER_PAGE _TAG_PAGE_COUNT _ISSUES_PAGE_COUNT _API_REQUEST_COUNT
+    _REQUESTS_PER_PAGE='100'
+    _TAG_PAGE_COUNT=$(( (61 + 140 + 100 - 1) / 100 ))
+    _ISSUES_PAGE_COUNT=$(( (${_ISSUE_COUNT} + ${_PULL_REQUEST_COUNT} + ${_REQUESTS_PER_PAGE} - 1) / ${_REQUESTS_PER_PAGE} ))
+    COUNT=$(( 3 + 1 + 20 + (61 * 2) + (140 * 2) ))
+    _API_REQUEST_COUNT=$(( ${_TAG_PAGE_COUNT} + ${_ISSUES_PAGE_COUNT} + ${_TAG_COUNT} + (${_ISSUE_COUNT} * 2) + (${_PULL_REQUEST_COUNT} *2) ))
+    log_term 2 "Calculated ${_API_REQUEST_COUNT} api requests for ghangelog generation"
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    github_api_limit_check "${_API_REQUEST_COUNT}"
+    github_changelog_generator --token "${GITHUB_OATH_TOKEN}" --future-release "${_RELEASE}" "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"
+    git add CHANGELOG.md
+    git commit -m "Update CHANGELOG for ${_RELEASE} release [skip ci]"
+    git push -u origin "release-${_RELEASE}"
+    # GitHub is sometimes a bit slow here
+    sleep 3
+}
+
+merge_release_branch_to_named_branch () {
+    test_for_hub
+    local _REPOSITORY="${1}"
+    local _RELEASE="${2}"
+    local _BRANCH="${3}"
+    if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
+        log_term 0 "Repository required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
+        log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    if [ "${_BRANCH:-NULL}" == 'NULL' ]; then
+        log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    # Ensure the repository exists in the repository path
+    if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
+        log_term 0 "Repository '${_REPOSITORY}' not chekced out out in repository path '${REPOSITORY_PATH}'!"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+    cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
+
+    # Create a pull-request to merge the release branch into the named branch
+    github_api_limit_check '1'
+    hub pull-request -m "Update CHANGELOG for ${_RELEASE} release [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}":"${_BRANCH}" || exit 1
+
+    # Remove code review restriction from the named branch
+    repository_set_permissions "${_REPOSITORY}" "${_BRANCH}" 'unset'
+
+    # Switch to the named branch and merge the pull-request
+    log_term 1 "\nMerging release into the ${_BRANCH} branch for \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    git checkout "${_BRANCH}" || exit 1
+    git pull || exit 1
+    OUTPUT=$(git merge --no-ff -m "Merge release branch into ${_BRANCH} branch [skip ci]" "release-${_RELEASE}")
+    # If we are doing a patch release we will get some merge conflicts, lets
+    #+ attempt to resolve them automatically.
+    # We start by aborting the above attempted merge (resetting files) so we do
+    #+ not need to edit the merge conflicts manually.
+    # Then we retry the merge with the '--strategy recursive -X theirs' options
+    #+ to force our merge to win.
+    # There is a small risk to this as we may unintentionally blow away future
+    #+ (past the base release point) changes on the branch.
+    # Due to the risk, we will be very perscrptive about the files we will allow
+    #+ conflicts in and still go ahead with the change.
+    # This should limit the damage to known locations.
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
+    if [ "${?}" != '0' ]; then
+        log_term 0 "ERROR: Got conflict merging into ${_BRANCH} branch. Attempting to recover..."
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        # Make sure we only have only one conflict
+        if [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '1' ]; then
+            # In any repository we run a risk of errors in the changelog due to the
+            #+ way github_changelog_generator reorders issues on subesequent runs
+            # I (jd) have decided that I do not care enough about the changelog to
+            #+ manually resolve merge conflicts in it
+            # Lets simply take the most recent version and treat it as correct.
+            # As it is a changelog there is zero risk for breaking deployments with
+            #+ this strategy as we do not progromatically rely on the changelog.
+            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
+                    git merge --abort || exit 1
+                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into ${_BRANCH} [skip ci]" "release-${_RELEASE}" || exit 1
+            fi
+            # Make sure the conflict is in the nubis/builder/project.json file
+            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'nubis/builder/project.json')" == '1' ]; then
+                git merge --abort || exit 1
+                git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
+            fi
+        else
+            log_term 0 'ERROR: Unable to repair merge conflict. Aborting build.'
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit 1
+        fi
+    fi
+
+    git push origin HEAD:"${_BRANCH}" || exit 1
+
+    # Replace code review restriction on named branch
+    repository_set_permissions "${_REPOSITORY}" "${_BRANCH}"
+}
+
+tag_and_release_repository () {
+    local _REPOSITORY="${1}"
+    local _RELEASE="${2}"
+    if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
+        log_term 0 "Repository required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
+        log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 help
+        exit 1
+    fi
+    if [ ${#GITHUB_OATH_TOKEN} == 0 ]; then
+        log_term 0 "You must have \${GITHUB_OATH_TOKEN} set"
+        log_term 0 'https://github.com/skywinder/github-changelog-generator#github-token'
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+    # Ensure the repository exists in the repository path
+    if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
+        log_term 0 "Repository '${_REPOSITORY}' not chekced out out in repository path '${REPOSITORY_PATH}'!"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+    cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
+
+    log_term 1 "\nTaging release for \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+# TODO: Fix signed tags for nubis-automation user
+#    git tag -s "${_RELEASE}" -f -m"Signed ${_RELEASE} release" || exit 1
+    git tag "${_RELEASE}" -f -m"Tag ${_RELEASE} release" || exit 1
+    git push --tags -f || exit 1
+    # GitHub is sometimes a bit slow here
+    sleep 3
+
+    # Check to see if we already have a release on GitHub
+    github_api_limit_check '1'
+    _RELEASE_ID=$(curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" --request GET https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/tags/"${_RELEASE}" | jq --raw-output .id)
+
+    # If we have a release we need to delete it before recreating it
+    if [ "${_RELEASE_ID:-null}" != 'null' ]; then
+        log_term 1 "\nFound existing release with id:\"${_RELEASE_ID}\". Deleting..." -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        github_api_limit_check '1'
+        curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/"${_RELEASE_ID}" > /dev/null 2>&1
+    fi
+
+    # Now we can create the release
+    log_term 1 "\nCreating release on github for \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    github_api_limit_check '1'
+    curl --silent -H "Authorization: token ${GITHUB_OATH_TOKEN}" --request POST --data "{\"tag_name\": \"${_RELEASE}\"}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases > /dev/null 2>&1
+
+    # Close release issue and milestone (if it exists and is open)
+    local _ISSUE_TITLE="Tag ${_RELEASE} release"
+    local _ISSUE_COMMENT="Release of repository ${_REPOSITORY} for the ${_RELEASE} release complete. Closing issue."
+    local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${_REPOSITORY}" 'close')
+    close_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_ISSUE_COMMENT}" "${_MILESTONE}"
 }
 
 # Set up a repository for a release
@@ -644,6 +916,7 @@ repository_setup_release () {
         $0 help
         exit 1
     fi
+
     # Check out the repository in the repository path
     # This will check out the develop or patch branch
     log_term 1 "\nCloning repository: \"${_REPOSITORY}\"." -e
@@ -652,10 +925,15 @@ repository_setup_release () {
     cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
 
     # Create a release branch for us to work on
+    log_term 1 "\nCreatng release branch for repository: \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     create_release_branch "${_REPOSITORY}" "${_RELEASE}"
 
-    # This is a special edit to update the pinned version number to the current $RELEASE for the consul and vpc modules in nubis-deploy
+    # This is a special edit to update the pinned version number to the current ${_RELEASE}
+    #+ for the consul and vpc modules in nubis-deploy
     if [ "${_REPOSITORY}" == 'nubis-deploy' ]; then
+        log_term 1 "\nEditing deploy templates for repository: \"${_REPOSITORY}\"." -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         edit_deploy_templates "${_RELEASE}"
     fi
 
@@ -663,12 +941,12 @@ repository_setup_release () {
     local _ISSUE_TITLE="Tag ${_RELEASE} release"
     local _ISSUE_COMMENT="Tag a release of the ${_REPOSITORY} repository for the ${_RELEASE} release of the Nubis project."
     local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${_REPOSITORY}")
+    log_term 1 "\nFiling release issue for repository: \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     file_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_ISSUE_COMMENT}" "${_MILESTONE}"
 }
 
 repository_complete_release () {
-    test_for_github_changelog_generator
-    test_for_hub
     local _REPOSITORY="${1}"
     local _RELEASE="${2}"
     if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
@@ -683,200 +961,35 @@ repository_complete_release () {
         $0 help
         exit 1
     fi
-    if [ ${#CHANGELOG_GITHUB_TOKEN} == 0 ]; then
-        # https://github.com/koalaman/shellcheck/wiki/SC2016
-        # shellcheck disable=SC2016
-        log_term 0 'You must have ${CHANGELOG_GITHUB_TOKEN} set'
-        log_term 0 'https://github.com/skywinder/github-changelog-generator#github-token'
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        exit 1
-    fi
-    # Ensure the repository exists in the repository path
-    if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
-        log_term 0 "Repository '${_REPOSITORY}' not chekced out out in repository path '${REPOSITORY_PATH}'!"
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        exit 1
-    fi
-    cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
 
-    # Update the CHANGELOG and make a pull-request, rebasing first to ensure a clean repository
-    github_changelog_generator --future-release "${_RELEASE}" "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"
-    git add CHANGELOG.md
-    git commit -m "Update CHANGELOG for ${_RELEASE} release [skip ci]"
-    git push -u origin "release-${_RELEASE}"
-    # GitHub is sometimes a bit slow here
-    sleep 3
-    local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${_REPOSITORY}" 'close')
-    hub pull-request -m "Update CHANGELOG for ${_RELEASE} release [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":release-${_RELEASE}" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':master' || exit 1
-
-    # Remove code review restriction from master branch
-    repository_set_permissions "${_REPOSITORY}" 'master' 'unset'
-
-    # Switch to the master branch, merge the pull-request and then tag the release
-    log_term 1 "\nMerging release into master branch for \"${_REPOSITORY}\"." -e
+    # Generate the changelog for the release
+    log_term 1 "\nGenerating changelog for repository: \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    git checkout master || exit 1
-    git pull || exit 1
-    OUTPUT=$(git merge --no-ff -m "Merge release branch into master [skip ci]" "release-${_RELEASE}")
-    # If we are doing a patch release we will get some merge conflicts, lets
-    #+ attempt to resolve them automatically.
-    # We start by aborting the above attempted merge (resetting files) so we do
-    #+ not need to edit the merge conflicts manually.
-    # Then we retry the merge with the '--strategy recursive -X theirs' options
-    #+ to force our merge to win.
-    # There is a small risk to this as we may unintentionally blow away future
-    #+ (past the base release point) changes on the 'master' branch.
-    # Due to the risk, we will be very perscrptive about the files we will allow
-    #+ conflicts in and still go ahead with the change.
-    # This should limit the damage to known locations.
-    # https://github.com/koalaman/shellcheck/wiki/SC2181
-    # shellcheck disable=SC2181
-    if [ "${?}" != '0' ]; then
-        log_term 0 'ERROR: Got conflict merging into master. Attempting to recover...'
+    generate_changelog "${_REPOSITORY}" "${_RELEASE}"
+
+    # Do not merge back into master for patch release
+    if [ "${RELEASE_TO_PATCH:-NULL}" == 'NULL' ]; then
+        # Merge release branch into the master branch
+        log_term 1 "\nMerging release branch into master branch for repository: \"${_REPOSITORY}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        # In any repository we run a risk of errors in the changelog due to the
-        #+ way github_changelog_generator reorders issues on subesequent runs
-        # I (jd) have decided that I do not care enough about the changelog to
-        #+ manually resolve merge conflicts in it
-        # Lets simply take the most recent version and treat it as correct.
-        # As it is a changelog there is zero risk for breaking deployments with
-        #+ this strategy as we do not progromatically rely on the changelog.
-        #
-        # Make sure we only have only one conflict
-        if [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '1' ]; then
-            # Make sure the conflict is in the changelog file
-            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
-                    git merge --abort || exit 1
-                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into master [skip ci]" "release-${_RELEASE}" || exit 1
-            fi
-        else
-            log_term 0 'ERROR: Unable to repair merge conflict. Aborting build.'
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            exit 1
-        fi
-    fi
-    git push origin HEAD:master || exit 1
-    log_term 1 "\nTaging release for \"${_REPOSITORY}\"." -e
-    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    git tag -s "${_RELEASE}" -f -m"Signed ${_RELEASE} release" || exit 1
-    git push --tags -f || exit 1
-    # GitHub is sometimes a bit slow here
-    sleep 3
-
-    # Check to see if we already have a release on GitHub
-    _RELEASE_ID=$(curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request GET https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/tags/"${_RELEASE}" | jq --raw-output .id)
-
-    # If we have a release we need to delete it before recreating it
-    if [ "${_RELEASE_ID:-null}" != 'null' ]; then
-        log_term 1 "\nFound existing release with id:\"${_RELEASE_ID}\". Deleting..." -e
-        curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request DELETE https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases/"${_RELEASE_ID}" > /dev/null 2>&1
+        merge_release_branch_to_named_branch "${_REPOSITORY}" "${_RELEASE}" 'master'
     fi
 
-    # Now we can create the release
-    log_term 1 "\nCreating release on github for \"${_REPOSITORY}\"." -e
-    curl --silent -H "Authorization: token ${CHANGELOG_GITHUB_TOKEN}" --request POST --data "{\"tag_name\": \"${_RELEASE}\"}" https://api.github.com/repos/"${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"/releases > /dev/null 2>&1
-
-    # Close release issue and milestone (if it exists and is open)
-    local _ISSUE_TITLE="Tag ${_RELEASE} release"
-    local _ISSUE_COMMENT="Release of repository ${_REPOSITORY} for the ${_RELEASE} release complete. Closing issue."
-    local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${_REPOSITORY}" 'close')
-    close_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_ISSUE_COMMENT}" "${_MILESTONE}"
-
-    # Replace code review restriction on master branch
-    repository_set_permissions "${_REPOSITORY}" 'master'
-
-    # Create pull-request to merge into develop
-    hub pull-request -m "Merge ${_RELEASE} release into develop. [skip ci]" -h "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"":master" -b "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"':develop' # || exit 1
-
-    # Remove code review restriction from develop branch
-    repository_set_permissions "${_REPOSITORY}" 'develop' 'unset'
-
-    # Switch to the develop branch and merge the pull-request
-    log_term 1 "\nMerging release into develop branch for \"${_REPOSITORY}\"." -e
+    # Tag the release and push the release to GitHub
+    log_term 1 "\nTagging and releasing for repository: \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    git checkout develop || exit 1
-    git pull || exit 1
-    OUTPUT=$(git merge --no-ff -m "Merge release into develop [skip ci]" "master")
-    # If we are doing a patch release we will get some merge conflicts, lets
-    #+ attempt to resolve them automatically.
-    # We start by aborting the above attempted merge (resetting files) so we do
-    #+ not need to edit the merge conflicts manually.
-    # Then we retry the merge with the '--strategy recursive -X theirs' options
-    #+ to force our merge to win.
-    # There is a small risk to this as we may unintentionally blow away future
-    #+ (past the base release point) changes on the 'develop' branch.
-    # Due to the risk, we will be very perscrptive about the files we will allow
-    #+ conflicts in and still go ahead with the change.
-    # This should limit the damage to known locations.
-    # https://github.com/koalaman/shellcheck/wiki/SC2181
-    # shellcheck disable=SC2181
-    if [ "${?}" != '0' ]; then
-        log_term 0 'ERROR: Got conflict merging into develop Attempting to recover...'
+    tag_and_release_repository "${_REPOSITORY}" "${_RELEASE}"
+
+    # Do not merge back into develop for patch release
+    if [ "${RELEASE_TO_PATCH:-NULL}" == 'NULL' ]; then
+        # Merge release branch into the develop branch
+        log_term 1 "\nMerging release branch into develop branch for repository: \"${_REPOSITORY}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        # We will always get a merge conflict on nubis-deploy during a patch
-        #+ release.
-        # This is due to the fact that we update the pinned terraform modules to
-        #+ 'develop' after a release on the 'develop' branch.
-        # When we base our release from a previous release it is older in
-        #+ history and will not contain the 'develop' change.
-        # We then create a release branch (from the older start point) and edit
-        #+ the pinned Terraform modules to the current patch release.
-        # This creates a merge conflict when attempting to merge back into the
-        #+ 'develop' branch.
-        # In this case, we test to make sure the conflict occoured in the known
-        #+ files. If so we select our file as the authoritative one.
-        # There should be little risk to this strategy as we are passing -X ours
-        #+ to the 'recursive' stratagy, which should only affect the few lines
-        #+ in question.
-        #
-        if [ "${_REPOSITORY}" == 'nubis-deploy' ]; then
-            # Make sure we have exactly two conflicts
-            if [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '2' ]; then
-                if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/consul/main.tf')" == '1' ] \
-                && [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/vpc/main.tf')" == '1' ]; then
-                    git merge --abort || exit 1
-                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
-                fi
-            # Lets see if we also got bit by the changelog
-            elif [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '3' ]; then
-                if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/consul/main.tf')" == '1' ] \
-                && [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'modules/vpc/main.tf')" == '1' ] \
-                && [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
-                    git merge --abort || exit 1
-                    git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
-                fi
-            fi
-        # In any repository we run a risk of errors in the changelog due to the
-        #+ way github_changelog_generator reorders issues on subesequent runs
-        # I (jd) have decided that I do not care enough about the changelog to
-        #+ manually resolve merge conflicts in it
-        # Lets simply take the most recent version and treat it as correct.
-        # As it is a changelog there is zero risk for breaking deployments with
-        #+ this strategy as we do not progromatically rely on the changelog.
-        #
-        # Make sure we only have only one conflict
-        elif [ "$(echo "$OUTPUT" | grep -c 'CONFLICT')" == '1' ]; then
-            # Make sure the conflict is in the changelog file
-            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'CHANGELOG.md')" == '1' ]; then
-                git merge --abort || exit 1
-                git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
-            fi
-            # Make sure the conflict is in the nubis/builder/project.json file
-            if [ "$(echo "$OUTPUT" | grep 'CONFLICT' | grep -c 'nubis/builder/project.json')" == '1' ]; then
-                git merge --abort || exit 1
-                git merge --no-ff --strategy recursive -X theirs -m "Merge release branch into develop [skip ci]" "release-${_RELEASE}" || exit 1
-            fi
-        else
-            log_term 0 'ERROR: Unable to repair merge conflict. Aborting build.'
-            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            exit 1
-        fi
+        merge_release_branch_to_named_branch "${_REPOSITORY}" "${_RELEASE}" 'develop'
     fi
-    git push origin HEAD:develop || exit 1
-
-    # Replace code review restriction on develop branch
-    repository_set_permissions "${_REPOSITORY}" 'develop'
 
     # Remove the (now) unnecessary release branch
+    log_term 1 "\nRemoving release branch for repository: \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     delete_release_branch "${_REPOSITORY}" "${_RELEASE}"
 }
