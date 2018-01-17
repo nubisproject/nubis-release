@@ -404,11 +404,11 @@ delete_release_branch () {
 get_set_milestone () {
     milestone_open () {
         github_api_limit_check '1'
-        ghi milestone --list -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_MILESTONE}" | cut -d':' -f 1 | sed -e 's/^[[:space:]]*//'
+        ghi --no-color  milestone --list -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_MILESTONE}" | cut -d':' -f 1 | sed -e 's/^[[:space:]]*//'
     }
     milestone_closed () {
         github_api_limit_check '1'
-        ghi milestone --list --closed -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_MILESTONE}" | cut -d':' -f 1 | sed -e 's/^[[:space:]]*//'
+        ghi --no-color  milestone --list --closed -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_MILESTONE}" | cut -d':' -f 1 | sed -e 's/^[[:space:]]*//'
     }
     test_for_ghi
     local _MILESTONE="${1}"
@@ -434,14 +434,14 @@ get_set_milestone () {
         log_term 0 "Closing milestone ${_MILESTONE_NUMBER} for ${_REPOSITORY}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         github_api_limit_check '1'
-        _MILESTONE_NUMBER=$(ghi milestone --state closed "${_MILESTONE_NUMBER}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"  | cut -s -d'#' -f 2 | cut -d':' -f 1)
+        _MILESTONE_NUMBER=$(ghi --no-color milestone --state closed "${_MILESTONE_NUMBER}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"  | cut -s -d'#' -f 2 | cut -d':' -f 1)
     # Finally create the milestone as it does not appear to exist
     #+ Do not crete if we are closing
     elif [ "${_MILESTONE_NUMBER:-NULL}" == 'NULL' ] && [ "${_CLOSE_MILESTONE:-NULL}" == 'NULL'  ]; then
         log_term 0 "Creating milestone ${_MILESTONE} for ${_REPOSITORY}"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         github_api_limit_check '1'
-        _MILESTONE_NUMBER=$(ghi milestone --message "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"  | cut -d'#' -f 2 | cut -d' ' -f 1)
+        _MILESTONE_NUMBER=$(ghi --no-color milestone --message "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"  | cut -d'#' -f 2 | cut -d' ' -f 1)
     fi
     echo "${_MILESTONE_NUMBER}"
     return
@@ -499,10 +499,10 @@ get_release_issue () {
     local _ISSUE_NUMBER
     if [ "${_MILESTONE:-NULL}" == 'NULL' ]; then
         github_api_limit_check '1'
-        _ISSUE_NUMBER=$(ghi list --state open --no-pulls -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_ISSUE_TITLE}" | cut -d ' ' -f 3)
+        _ISSUE_NUMBER=$(ghi --no-color list --state open --no-pulls -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_ISSUE_TITLE}" | cut -d ' ' -f 3)
     else
         github_api_limit_check '1'
-        _ISSUE_NUMBER=$(ghi list --state open --no-pulls --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_ISSUE_TITLE}" | cut -d ' ' -f 3)
+        _ISSUE_NUMBER=$(ghi --no-color list --state open --no-pulls --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" | grep "${_ISSUE_TITLE}" | cut -d ' ' -f 3)
     fi
     log_term 1 "Got release issue number(s): \"${_ISSUE_NUMBER}\"."
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -544,10 +544,10 @@ file_issue () {
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     elif [ "${_MILESTONE:-NULL}" == 'NULL' ]; then
         github_api_limit_check '1'
-        ghi open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
+        ghi --no-color open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
     else
         github_api_limit_check '1'
-        ghi open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
+        ghi --no-color open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
     fi
 }
 
@@ -568,7 +568,7 @@ close_issue () {
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     else
         github_api_limit_check '1'
-        ghi close --message "${_ISSUE_COMMENT}" "${_ISSUE_NUMBER}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"
+        ghi --no-color close --message "${_ISSUE_COMMENT}" "${_ISSUE_NUMBER}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}"
     fi
 }
 

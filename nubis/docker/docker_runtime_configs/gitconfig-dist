@@ -1,0 +1,13 @@
+[user]
+        email = USER_NAME@DOMAIN.DOM
+        name  = DISPLAY NAME
+        signkey = GPG_KEY_ID
+[color]
+    ui = true
+[github]
+        user = USER_NAME
+[ghi]
+        token = API_KEY
+[credential]
+    helper = store --file /root/.git-credentials
+    helper = cache --timeout 30000
