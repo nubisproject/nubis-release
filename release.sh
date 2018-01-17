@@ -69,7 +69,7 @@ setup_main_command () {
     if [ "${USE_DOCKER:-'NULL'}" == NULL ]; then
         MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     else
-        local RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
+        local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
         declare -a DOCKER_COMMAND=( 'docker' 'run' '-it' '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" 'nubis-release' )
         MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     fi
@@ -413,13 +413,13 @@ while [ "$1" != "" ]; do
         build )
             shift
             setup_main_command
-            release-do-vault build ${@}
+            release-do-vault build "${@}"
             GOT_COMMAND=1
         ;;
         build-and-release )
             shift
             setup_main_command
-            release-do-vault build-and-release ${@}
+            release-do-vault build-and-release "${@}"
             GOT_COMMAND=1
         ;;
         build-all )
@@ -455,7 +455,7 @@ while [ "$1" != "" ]; do
         release )
             shift
             setup_main_command
-            release-do release ${@}
+            release-do release "${@}"
             GOT_COMMAND=1
         ;;
         upload-lambda )
