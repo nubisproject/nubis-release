@@ -69,7 +69,8 @@ setup_main_command () {
     if [ "${USE_DOCKER:-'NULL'}" == NULL ]; then
         MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     else
-        declare -a DOCKER_COMMAND=( 'docker' 'run' '-it' '-v' '/var/run/docker.sock:/var/run/docker.sock' 'nubis-release' )
+        local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
+        declare -a DOCKER_COMMAND=( 'docker' 'run' '-it' '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" 'nubis-release' )
         MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     fi
     AWS_VAULT_EXEC_MAIN=( "${AWS_VAULT_EXEC[@]}" "${MAIN_EXEC[@]}" )
@@ -272,6 +273,24 @@ create-milestones () {
     "${MAIN_EXEC[@]}" create-milestones "${RELEASE}" "${MILESTONE_REPOSITORY_ARRAY[@]}"
 }
 
+release-do () {
+    declare -a _ACTION; _ACTION=( ${@} )
+    if ! "${MAIN_EXEC[@]}" "${_ACTION[@]}" ; then
+        log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+}
+
+release-do-vault () {
+    declare -a _ACTION; _ACTION=( ${@} )
+    if ! "${AWS_VAULT_EXEC_MAIN[@]}" "${_ACTION[@]}" ; then
+        log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit 1
+    fi
+}
+
 instructions () {
     test_for_rvm
     echo -e "\n\e[1;4;33mNormal Release Instructions:\e[0m\n"
@@ -391,6 +410,18 @@ while [ "$1" != "" ]; do
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             set -x
         ;;
+        build )
+            shift
+            setup_main_command
+            release-do-vault build "${@}"
+            GOT_COMMAND=1
+        ;;
+        build-and-release )
+            shift
+            setup_main_command
+            release-do-vault build-and-release "${@}"
+            GOT_COMMAND=1
+        ;;
         build-all )
             setup_main_command
             RELEASE="${2}"
@@ -419,6 +450,12 @@ while [ "$1" != "" ]; do
             setup_main_command
             # NOTE: RELEASE_DATES set in local variables file
             "${MAIN_EXEC[@]}" get-release-stats "${RELEASE_DATES}"
+            GOT_COMMAND=1
+        ;;
+        release )
+            shift
+            setup_main_command
+            release-do release "${@}"
             GOT_COMMAND=1
         ;;
         upload-lambda )
