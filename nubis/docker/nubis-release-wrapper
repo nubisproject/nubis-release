@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cp /root/.git-credentials-seed /root/.git-credentials
+
+cd /nubis/bin || exit 1
+
+main.sh "${@}"

@@ -1,0 +1,15 @@
+*.md
+#!README.md
+.git
+Dockerfile
+License
+logs/
+nubis/
+!nubis/docker
+release.sh
+variables_local.sh
+variables_local.sh-dist
+.repositories
+.gitignore
+.gitmodules
+.travis.yml

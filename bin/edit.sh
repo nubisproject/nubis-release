@@ -3,14 +3,14 @@
 # Here are all of the functions to edit various files during a release
 #
 
-# Update project_versoin to the current release
+# Update project_version to the current release
 edit_project_json () {
     local _RELEASE="${1}"
     local _REPOSITORY="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        $0 help
+        $0 edit help
         exit 1
     fi
     test_for_jq
@@ -49,47 +49,109 @@ edit_project_json () {
 
 # This is a special edit to update the pinned version number to the current $RELEASE for the consul and vpc modules in nubis-deploy
 edit_deploy_templates () {
-    local _RELEASE="${1}"
+    local -r _RELEASE="${1}"
+    local -r _GIT_SHA="${2}"
+    local _REF
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        $0 help
+        $0 edit help
         exit 1
     fi
+    if [ "${_GIT_SHA:-NULL}" == 'NULL' ]; then
+        _REF="${_RELEASE}"
+    else
+        _REF="${_GIT_SHA}"
+    fi
 
-    local _CONSUL_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/consul/main.tf"
+    ENTRY_PWD=$(pwd)
+
     local _VPC_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/vpc/main.tf"
 
-    sed -i "s:nubis-consul//nubis/terraform/multi?ref=v[0-9].[0-9].[0-9]*:nubis-consul//nubis/terraform/multi?ref=${_RELEASE}:g" "${_CONSUL_FILE}"
+    # This matches a release (v1.3.0) a dev release (v1.3.0-dev) or master or develop
+    local _RELEASE_REGEX="\(\(v\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\(-dev\)\{0,1\}\)\|master\|develop\)"
 
-    sed -i "s:nubis-jumphost//nubis/terraform?ref=v[0-9].[0-9].[0-9]*:nubis-jumphost//nubis/terraform?ref=${_RELEASE}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-fluent-collector//nubis/terraform/multi?ref=v[0-9].[0-9].[0-9]*:nubis-fluent-collector//nubis/terraform/multi?ref=${_RELEASE}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-prometheus//nubis/terraform?ref=v[0-9].[0-9].[0-9]*:nubis-prometheus//nubis/terraform?ref=${_RELEASE}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-ci//nubis/terraform?ref=v[0-9].[0-9].[0-9]*:nubis-ci//nubis/terraform?ref=${_RELEASE}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-consul//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-consul//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+
+    sed -i "s:nubis-jumphost//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-jumphost//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-fluent-collector//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-fluent-collector//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-prometheus//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-prometheus//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-ci//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-ci//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-sso//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-sso//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
 
     # Check in the edits
     #+ Unless we are on master or develop (assume these are test builds)
-    cd "${REPOSITORY_PATH}"/"${_REPOSITORY}" || exit 1
     local _CURRENT_BRANCH; _CURRENT_BRANCH=$(git branch | cut -d' ' -f 2)
-    declare -a SKIP_BRANCHES=( 'master' 'develop' )
-    if [[ ! " ${SKIP_BRANCHES[@]} " =~ ${_CURRENT_BRANCH} ]]; then
+    local _SKIP_BRANCHES="^(master|develop)$"
+    local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"
+    if [[ ! "${_CURRENT_BRANCH}" =~ ${_SKIP_BRANCHES} ]] || [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
+        cd "${REPOSITORY_PATH}"/'nubis-deploy' || exit 1
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions 'nubis-deploy' 'develop' 'unset'
+        fi
         check_in_changes 'nubis-deploy' "Update pinned release version for ${_RELEASE} release"
+        if [ "${_CURRENT_BRANCH}" == 'develop' ]; then
+            repository_set_permissions 'nubis-deploy' 'develop'
+        fi
     fi
-    unset SKIP_BRANCHES
+    cd "${ENTRY_PWD}" || exit 0
 }
 
-# This function is depricated as nubis-builder is on its own release cadance now
-# This is a special edit to update the pinned version number to the current $RELEASE for nubis-ci
-# edit_ci_template () {
-#     local _RELEASE="${1}"
-#     if [ ${_RELEASE:-NULL} == 'NULL' ]; then
-#         log_term 0 "Relesae number required"
-#         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-#         $0 help
-#         exit 1
-#     fi
-#
-#     local _CI_FILE="${REPOSITORY_PATH}/nubis-ci/nubis/puppet/builder.pp"
-#
-#     sed -i "s:revision => 'v[0-9].[0-9].[0-9]*',:revision => '${_RELEASE}',:g" "${_CI_FILE}"
-# }
+modify () {
+    # Grab and setup called options
+    while [ "$1" != "" ]; do
+        case $1 in
+            -gs | --git-sha )
+                # Specify a git sha to use as the current release
+                GIT_SHA="${2}"
+                shift
+            ;;
+            -p | --path )
+                # The path to where repository is checked out
+                REPOSITORY_PATH="${2}"
+                shift
+            ;;
+            -r | --release )
+                # Specify a release number for the current release
+                RELEASE="${2}"
+                shift
+            ;;
+            -R | --repository )
+                # Specify a repository to edit project.json
+                REPOSITORY="${2}"
+                shift
+            ;;
+            -h | -H | --help )
+                echo -en "\n$0\n\n"
+                echo -en "Usage: $0 edit --release 'vX.X.X' [options] command\n\n"
+                echo -en "Commands:\n"
+                echo -en "  nubis-deploy    Edit version string for files in nubis-deploy\n"
+                echo -en "  project-json    Edit JSON file for current project\n\n"
+                echo -en "Options:\n"
+                echo -en "  --help         -h    Print this help information and exit\n"
+                echo -en "  --path         -p    The path to where repository is checked out\n"
+                echo -en "  --release      -r    Specify a release number for the current release\n"
+                echo -en "  --repository   -R    Specify a repository to edit project.json\n"
+                echo -en "  --git-sha      -gs   Specify a git sha to use as the current release\n"
+                echo -en "                         This overrides the release number in nubis-deploy only\n\n"
+                exit 0
+            ;;
+            nubis-deploy )
+                # Edit version string for files in nubis-deploy
+                edit_deploy_templates "${RELEASE}" "${GIT_SHA}"
+                GOT_COMMAND=1
+            ;;
+            project-json )
+                # Edit JSON file for current project
+                edit_project_json "${RELEASE}" "${REPOSITORY}"
+                GOT_COMMAND=1
+            ;;
+        esac
+        shift
+    done
+
+    # If we did not get a valid command print the help message
+    if [ ${GOT_COMMAND:-0} == 0 ]; then
+        $0 edit --help
+    fi
+}

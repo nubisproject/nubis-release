@@ -29,3 +29,7 @@ variables_local.sh
 logs/
 
 .repositories/
+
+nubis/docker/docker_runtime_configs/*
+!nubis/docker/docker_runtime_configs/*-dist
+

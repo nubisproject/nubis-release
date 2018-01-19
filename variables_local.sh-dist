@@ -1,25 +1,33 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 
 # This file is for variables that are local to the user running the release
 
-# Path to the location to clone git repositories
-# Defaults to the location of "$0/.repositories" which is in .gitignore
-REPOSITORY_PATH="$(dirname "$(readlink -f "$0")")/.repositories"
-log_term 2 "REPOSITORY_PATH=${REPOSITORY_PATH}"
-log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+# List of repositories that will be released for the release which do not require an AMI build
+# It is not necessary to include repositories here that will be built, they are automatically released
+declare -a RELEASE_REPOSITORIES=( 'one' 'two' )
 
-# Your GitHub login (Where you fork Nubis repositories)
-GITHUB_LOGIN='tinnightcap'
-log_term 2 "GITHUB_LOGIN=${GITHUB_LOGIN}"
-log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+# List of repositories that need to be built from nubis-base and released during a release
+# nubis-base is always built and does not need to be specified here
+declare -a BUILD_REPOSITORIES=( 'one' 'two' )
+
+# List of lambda functions that need to be built and released during a release
+declare -a LAMBDA_FUNCTIONS=( 'one' 'two' )
+
+# The name of the S3 bucket to upload assets (lambda functions) to
+S3_BUCKET='nubis-stacks'
 
 # The aws-vault profile where all assets will be built
 # NOTE: This should be 'nubis-market-admin' for actual release builds
 PROFILE='nubis-market-admin'
-log_term 2 "PROFILE=${PROFILE}"
-log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
-# Your aws-vault command
-declare -a AWS_VAULT_COMMAND=( 'aws-vault' '--backend=kwallet' 'exec' '--assume-role-ttl=60m' "${PROFILE}" '--' )
-log_term 2 "AWS_VAULT_COMMAND=${AWS_VAULT_COMMAND[*]}"
+# Set up the aws-vault command
+declare -a AWS_VAULT_EXEC=( 'aws-vault' '--backend=kwallet' 'exec' '--assume-role-ttl=60m' '--session-ttl=4h' "${PROFILE}" '--' )
+
+# The Oath token for the user with necessary permissions on GitHub
+GITHUB_OATH_TOKEN='XXXXXX'
+
+# Dates for this release. This is only used for generating the list of issues which were closed during this time window
+RELEASE_DATES="2017-06-24..2017-10-06"
+log_term 3 "RELEASE_DATES=${RELEASE_DATES}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
