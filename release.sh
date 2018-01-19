@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# The docker container to use for the release
+DOCKER_RELEASE_CONTAINER='nubisproject/nubis-release:v0.2.0'
+
 # Make sure we capture failures from pipe commands
 set -o pipefail
 
@@ -66,11 +69,11 @@ fi
 
 # Set up the main.sh command
 setup_main_command () {
-    if [ "${USE_DOCKER:-'NULL'}" == NULL ]; then
+    if [ "${USE_DOCKER:-'NULL'}" == 'FALSE' ]; then
         MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     else
         local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
-        declare -a DOCKER_COMMAND=( 'docker' 'run' '-it' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' 'nubis-release' )
+        declare -a DOCKER_COMMAND=( 'docker' 'run' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' "${DOCKER_RELEASE_CONTAINER}" )
         MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
     fi
     AWS_VAULT_EXEC_MAIN=( "${AWS_VAULT_EXEC[@]}" "${MAIN_EXEC[@]}" )
@@ -204,9 +207,10 @@ release_build_repositories () {
     else
         COMMAND='build'
     fi
-    log_term 1 "\nBuilding and Releasing \"${#BUILD_REPOSITORIES[*]}\" repositories at \"${_RELEASE}\"." -e
+    log_term 1 "\n${COMMAND} \"${#BUILD_REPOSITORIES[*]}\" repositories at \"${_RELEASE}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    parallel --no-notice --output-as-files --results logs --progress --jobs "${#BUILD_REPOSITORIES[@]}" "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
+#    parallel --no-notice --output-as-files --results logs --progress --jobs "${#BUILD_REPOSITORIES[@]}" "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
+    parallel --no-notice --output-as-files --results logs --progress --jobs 4 "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
     if [ "${_RV:-0}" != '0' ]; then
         log_term 0 "\n!!!!! ${_RV} builds failed failed. Inspect output logs. !!!!!" -e
     fi; unset _RV
@@ -269,12 +273,14 @@ create-milestones () {
         "${MAIN_EXEC[@]}" help
         exit 1
     fi
+    cd "${SCRIPT_PATH}/bin" || exit 1
     declare -a MILESTONE_REPOSITORY_ARRAY=( 'nubis-base' "${RELEASE_REPOSITORIES[@]}" "${BUILD_REPOSITORIES[@]}" )
     "${MAIN_EXEC[@]}" create-milestones "${RELEASE}" "${MILESTONE_REPOSITORY_ARRAY[@]}"
 }
 
 release-do () {
     declare -a _ACTION; _ACTION=( ${@} )
+    cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${MAIN_EXEC[@]}" "${_ACTION[@]}" ; then
         log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -284,6 +290,7 @@ release-do () {
 
 release-do-vault () {
     declare -a _ACTION; _ACTION=( ${@} )
+    cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${AWS_VAULT_EXEC_MAIN[@]}" "${_ACTION[@]}" ; then
         log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -294,7 +301,7 @@ release-do-vault () {
 instructions () {
     test_for_rvm
     echo -e "\n\e[1;4;33mNormal Release Instructions:\e[0m\n"
-    echo "rvm use 2.1"
+#    echo "rvm use 2.1"
     echo "RELEASE='v2.0.x'"
     echo "$0 -v build-and-release-all \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables_local.sh"
@@ -306,11 +313,11 @@ instructions () {
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
     echo "RELEASE='v2.x.0-dev' # For the next release"
-    echo "$0 create-milestones \${RELEASE}"
+    echo "$0 -v create-milestones \${RELEASE}"
     echo "$0 -v build-all \${RELEASE}"
 
     echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
-    echo "rvm use 2.1"
+#    echo "rvm use 2.1"
     echo "RELEASE='v2.0.2' # The new release number."
     echo "RELEASE_TO_PATCH='v2.0.1' # The previous release we are going to patch."
     echo "$0 -v --patch \${RELEASE_TO_PATCH} build-and-release-all \${RELEASE}"
@@ -332,8 +339,9 @@ while [ "$1" != "" ]; do
             echo -en "Options:\n"
             echo -en "  --help            -h      Print this help information and exit\n"
             echo -en "  --bucket          -b      The name of a s3 bucket to upload lambda functions to\n"
-            echo -en "  --docker          -d      Use the nubis-release docker container for all operations\n"
+            echo -en "  --no-docker       -D      Do not use the nubis-release docker container for all operations\n"
             echo -en "  --instructions    -i      Echo build steps\n"
+            echo -en "  --local           -l      Use a local build of the container instead of the one on dockerhub\n"
             echo -en "  --patch                   The release number to patch from\n"
             echo -en "  --profile         -P      Specify a profile to use when uploading the files\n"
             echo -en "                              Defaults to '$PROFILE'\n"
@@ -352,13 +360,17 @@ while [ "$1" != "" ]; do
             S3_BUCKET="${2}"
             shift
         ;;
-        -d | --docker )
-            # Use the nubis-release docker container for all operations
-            USE_DOCKER='TRUE'
+        -D | --no-docker )
+            # Do not the nubis-release docker container for all operations
+            USE_DOCKER='FALSE'
         ;;
         -i | --instructions )
             $0 instructions
             GOT_COMMAND=1
+        ;;
+        -l | --local )
+            # Use a local build of the container instead of the one on dockerhub
+            DOCKER_RELEASE_CONTAINER='nubis-release'
         ;;
         --patch )
             # The release number to patch from (tag to check out as starting point for release)
