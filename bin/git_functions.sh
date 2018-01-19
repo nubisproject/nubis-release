@@ -255,14 +255,12 @@ clone_repository () {
         log_term 1 "Directory \"${REPOSITORY_PATH}/${_REPOSITORY}\" already exists. Removing!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         rm -rf "${REPOSITORY_PATH:?'REPOSITORY_PATH is unset'}/${_REPOSITORY:?'REPOSITORY is unset'}" || exit 1
-
     fi
     # If the repository path does not exist, create it
     if [ ! -d "${REPOSITORY_PATH}" ]; then
         log_term 1 "Directory \"${REPOSITORY_PATH}\" does not exist. Creating."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         mkdir "${REPOSITORY_PATH:?'REPOSITORY_PATH is unset'}" || exit 1
-
     fi
     cd "${REPOSITORY_PATH}" || exit 1
     github_api_limit_check '1'

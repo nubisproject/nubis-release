@@ -32,40 +32,38 @@ RUN apk add --no-cache \
     nodejs-npm \
     ruby \
     ruby-irb \
-    ruby-rdoc
-
-# Set up the directory structure for the code and utilities
-RUN [ "mkdir", "-p", "/nubis/bin", "/nubis/nubis-release/.repositories", "/root/.config"]
+    ruby-rdoc; \
+    rm -f /var/cache/apk/APKINDEX.*
 
 # Do not add a 'v' as pert of the version string (ie: v1.1.3)
 #+ This causes issues with extraction due to GitHub's methodology
 #+ Where necessary the 'v' is specified in code below
+# Set up the path to include our code and utilities
 ENV GhiVersion=1.2.0 \
-    ChangelogGeneratorVersion=1.14.1
+    ChangelogGeneratorVersion=1.14.1 \
+    PATH=/nubis/bin:$PATH
 
 # Install gem dependencies
-RUN gem install ghi -v ${GhiVersion}
-RUN gem install rake
-RUN gem install github_changelog_generator -v ${ChangelogGeneratorVersion}
+# Set up the directory structure for the code and utilities
+# Create empty gitconfig, git-credentials and hub files
+#+ This is for runtime mounting of file volumes
+RUN gem install ghi -v ${GhiVersion}; \
+    gem install rake; \
+    gem install github_changelog_generator -v ${ChangelogGeneratorVersion}; \
+    mkdir -p /nubis/.repositories /root/.config; \
+    touch /root/.gitconfig /root/.git-credentials-seed /root/.config/hub
 
 # Install hub
 COPY --from=build-hub /app/hub/bin/hub /nubis/bin/hub
 
-# Clean up apk cache files
-RUN rm -f /var/cache/apk/APKINDEX.*
+# Copy over the bashrc file to dress up the prompt
+COPY [ "nubis/docker/bashrc", "/root/.bashrc" ]
 
 # Copy over nubis-release code
-COPY [ "bin/", "/nubis/nubis-release/bin/" ]
+COPY [ "bin/", "/nubis/bin/" ]
 
 # Copy over the nubis-release-wrapper script
 COPY [ "nubis/docker/nubis-release-wrapper", "/nubis/nubis-release/" ]
-
-# Create empty gitconfig and git-credentials files
-#+ This is for runtime mounting file volumes
-RUN touch /root/.gitconfig /root/.git-credentials-seed /root/.config/hub
-
-# Set up the path to include our code and utilities
-ENV PATH /nubis/bin:$PATH
 
 # Set the entry-point to the wrapper script
 ENTRYPOINT [ "/nubis/nubis-release/nubis-release-wrapper" ]

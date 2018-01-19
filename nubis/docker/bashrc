@@ -1,0 +1,8 @@
+# https://github.com/koalaman/shellcheck/wiki/SC2148
+# shellcheck disable=SC2148
+# Set up a more meaningful prompt.
+if [ "$(id -u)" -eq 0 ]; then
+    PS1="\u@nubis-release:\w# "
+else # normal
+    PS1="\u@nubis-release:\w$ "
+fi

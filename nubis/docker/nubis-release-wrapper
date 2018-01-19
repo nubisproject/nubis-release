@@ -2,6 +2,6 @@
 
 cp /root/.git-credentials-seed /root/.git-credentials
 
-cd /nubis/nubis-release/bin || exit 1
+cd /nubis/bin || exit 1
 
-./main.sh "${@}"
+main.sh "${@}"
