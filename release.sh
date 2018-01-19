@@ -232,7 +232,7 @@ build_and_release_all () {
     # Upload lambda functions
     log_term 1 "\nUploading Lambda functions" -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-#    upload_lambda_functions "${_RELEASE}" "${S3_BUCKET}" "${_SKIP_RELEASE}"
+    upload_lambda_functions "${_RELEASE}" "${S3_BUCKET}" "${_SKIP_RELEASE}"
 
     # Release repositories with no AMI build requirement
     log_term 1 "\nReleasing repositories with no AMI build requirement" -e
