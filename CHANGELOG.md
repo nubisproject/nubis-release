@@ -1,5 +1,17 @@
 # Change Log
 
+## [v0.2.0](https://github.com/nubisproject/nubis-release/tree/v0.2.0) (2018-01-19)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.1.0...v0.2.0)
+
+**Closed issues:**
+
+- Don't use CHANGELOG\_GITHUB\_TOKEN for github permission API [\#15](https://github.com/nubisproject/nubis-release/issues/15)
+- Create docker container with all dependencies [\#8](https://github.com/nubisproject/nubis-release/issues/8)
+
+**Merged pull requests:**
+
+- Updates for lambda functions [\#45](https://github.com/nubisproject/nubis-release/pull/45) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v0.1.0](https://github.com/nubisproject/nubis-release/tree/v0.1.0) (2018-01-19)
 **Fixed bugs:**
 
@@ -14,9 +26,12 @@
 - Dev builds do not update project.json files [\#7](https://github.com/nubisproject/nubis-release/issues/7)
 - nubis-deploy should be pinned to develop for dev builds [\#6](https://github.com/nubisproject/nubis-release/issues/6)
 - Fix nubis-deploy regex [\#5](https://github.com/nubisproject/nubis-release/issues/5)
+- Tag v0.1.0 release [\#41](https://github.com/nubisproject/nubis-release/issues/41)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v0.1.0 release \[skip ci\] [\#43](https://github.com/nubisproject/nubis-release/pull/43) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.1.0 release \[skip ci\] [\#42](https://github.com/nubisproject/nubis-release/pull/42) ([nubis-automation](https://github.com/nubis-automation))
 - Changes to make nubis-builder container work [\#40](https://github.com/nubisproject/nubis-release/pull/40) ([tinnightcap](https://github.com/tinnightcap))
 - Fixes for releasing using docker container [\#39](https://github.com/nubisproject/nubis-release/pull/39) ([tinnightcap](https://github.com/tinnightcap))
 - Update to .dockerignore to resolve paths [\#38](https://github.com/nubisproject/nubis-release/pull/38) ([tinnightcap](https://github.com/tinnightcap))

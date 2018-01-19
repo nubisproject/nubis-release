@@ -26,13 +26,17 @@ RUN apk add --no-cache \
     bash \
     curl \
     docker \
+    file \
     git \
     jq \
     nodejs \
     nodejs-npm \
+    openssl \
+    py-pip \
     ruby \
     ruby-irb \
-    ruby-rdoc; \
+    ruby-rdoc \
+    zip; \
     rm -f /var/cache/apk/APKINDEX.*
 
 # Do not add a 'v' as pert of the version string (ie: v1.1.3)
@@ -50,6 +54,7 @@ ENV GhiVersion=1.2.0 \
 RUN gem install ghi -v ${GhiVersion}; \
     gem install rake; \
     gem install github_changelog_generator -v ${ChangelogGeneratorVersion}; \
+    pip install awscli; \
     mkdir -p /nubis/.repositories /root/.config; \
     touch /root/.gitconfig /root/.git-credentials-seed /root/.config/hub
 
