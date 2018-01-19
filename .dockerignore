@@ -5,7 +5,11 @@ Dockerfile
 License
 logs/
 nubis/
-! nubis/docker
+!nubis/docker
 release.sh
 variables_local.sh
 variables_local.sh-dist
+.repositories
+.gitignore
+.gitmodules
+.travis.yml

@@ -60,13 +60,14 @@ build_amis () {
     exec 5>&1
     cd "${REPOSITORY_PATH}/${_REPOSITORY}" || exit 1
     # Make this command a bit more readable
-    #+ NOTE: NUBIS_DOCKER_BUILDER_VERSION and AMI_COPY_REGIONS are set in the top level variables file
-    NUBIS_DOCKER=( 'docker' 'run' \
+    #+ NOTE: NUBIS_BUILDER_VERSION and AMI_COPY_REGIONS are set in the top level variables file
+    NUBIS_DOCKER=( 'docker' 'run' '-it' \
                 '-u' "$UID:$(id -g)" \
-                '--env-file' "${SCRIPT_PATH}/docker_env" \
-                '-v' "$PWD:/nubis/data" \
+                '--env-file' '/nubis/bin/docker_env' \
+                '--mount' 'source=nubis-release,target=/nubis/data' \
                 '-e' "GIT_COMMIT_SHA=$(git rev-parse HEAD)" \
-                "nubisproject/nubis-builder:${NUBIS_DOCKER_BUILDER_VERSION}" \
+                "nubisproject/nubis-builder:${NUBIS_BUILDER_VERSION}" \
+                '--volume-path' "${_REPOSITORY}" \
                 '--copy-regions' "${AMI_COPY_REGIONS}" \
                 'build' \
                 '--instance-type' 'c3.large' )
