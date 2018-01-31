@@ -100,7 +100,7 @@ upload_lambda_functions () {
     local -r _S3_BUCKET="${2}"
     local -r _SKIP_RELEASE="${3}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -139,7 +139,7 @@ release_no_build_repositories () {
     local -r _RELEASE="${1}"
     local -r _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -175,7 +175,7 @@ release_nubis_base_repository () {
     local -r _RELEASE="${1}"
     local -r _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -204,7 +204,7 @@ release_build_repositories () {
     local -r _RELEASE="${1}"
     local -r _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -228,7 +228,7 @@ build_and_release_all () {
     local -r _RELEASE="${1}"
     local _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -276,7 +276,7 @@ build_and_release_all () {
 create-milestones () {
     local -r _RELEASE="${1}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
