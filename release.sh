@@ -255,7 +255,7 @@ build_and_release_all () {
     unset _VAULT_PROFILE _VAULT_ACCOUNT
 
     log_term 0 '\nIf you care to monitor the build progress:' -e
-    log_term 0 'tail -f logs/1/*/stdout logs/1/*/stderr'
+    log_term 0 'tail -f bin/logs/1/*/stdout bin/logs/1/*/stderr'
 
     # Build and release nubis-base
     # All other infrastructure builds are built from nubis-base, we need to build it first
@@ -310,7 +310,7 @@ instructions () {
     test_for_rvm
     echo -e "\n\e[1;4;33mNormal Release Instructions:\e[0m\n"
 #    echo "rvm use 2.1"
-    echo "RELEASE='v2.0.x'"
+    echo "RELEASE='v2.1.x'"
     echo "$0 -v build-and-release-all \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables_local.sh"
     echo "vi ./variables_local.sh"
@@ -326,8 +326,8 @@ instructions () {
 
     echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
 #    echo "rvm use 2.1"
-    echo "RELEASE='v2.0.2' # The new release number."
-    echo "RELEASE_TO_PATCH='v2.0.1' # The previous release we are going to patch."
+    echo "RELEASE='v2.1.2' # The new release number."
+    echo "RELEASE_TO_PATCH='v2.1.1' # The previous release we are going to patch."
     echo "$0 -v --patch \${RELEASE_TO_PATCH} build-and-release-all \${RELEASE}"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
@@ -373,7 +373,7 @@ while [ "$1" != "" ]; do
             USE_DOCKER='FALSE'
         ;;
         -i | --instructions )
-            $0 instructions
+            instructions
             GOT_COMMAND=1
         ;;
         -l | --local )
