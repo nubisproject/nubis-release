@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 
 # The docker container to use for the release
 DOCKER_RELEASE_CONTAINER='nubisproject/nubis-release:v0.2.0'
@@ -129,7 +130,7 @@ upload_lambda_functions () {
             "${AWS_VAULT_EXEC_MAIN[@]}" upload-assets --multi-region --bucket "${_S3_BUCKET}" --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}" || exit 1
 
         fi
-        let _COUNT=${_COUNT}+1
+        _COUNT=$((_COUNT + 1))
     done
     unset LAMBDA_FUNCTION
 }
@@ -156,7 +157,7 @@ release_no_build_repositories () {
                 log_term 0 "\n******** Release of repository\"${REPOSITORY}\" Failed! ********" -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             fi
-            let _COUNT=${_COUNT}+1
+        _COUNT=$((_COUNT + 1))
         done
         unset REPOSITORY
     # This is a special edit to update the pinned version number to 'develop' for terraform modules in nubis-deploy
@@ -287,7 +288,7 @@ create-milestones () {
 }
 
 release-do () {
-    declare -a _ACTION; _ACTION=( ${@} )
+    IFS_SAVE="$IFS"; read -r -a _ACTION <<< "${@}"; IFS="$IFS_SAVE"
     cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${MAIN_EXEC[@]}" "${_ACTION[@]}" ; then
         log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
@@ -297,7 +298,7 @@ release-do () {
 }
 
 release-do-vault () {
-    declare -a _ACTION; _ACTION=( ${@} )
+    IFS_SAVE="$IFS"; read -r -a _ACTION <<< "${@}"; IFS="$IFS_SAVE"
     cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${AWS_VAULT_EXEC_MAIN[@]}" "${_ACTION[@]}" ; then
         log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e

@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 # shellcheck disable=SC2034
 # https://github.com/koalaman/shellcheck/wiki/SC2034
 #

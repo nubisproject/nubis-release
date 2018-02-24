@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 #
 
 push-files () {
@@ -97,7 +98,7 @@ push-files () {
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             fi
         done
-        let _COUNT+='1'
+        _COUNT=$((_COUNT + 1))
     done
 }
 

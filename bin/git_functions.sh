@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 #
 # Functions for working with git and GitHub here
 #
@@ -108,7 +109,7 @@ get_link_header_segments () {
         return
     fi
     while [ "${COUNT:-0}" -lt 4 ]; do
-        let COUNT=${COUNT}+1
+        COUNT=$((COUNT + 1))
         LINK_SEGMENT=$(echo "${LINK}" | cut -d ',' -f "${COUNT}")
         if [ "${#LINK_SEGMENT}" -gt 0 ]; then
             echo "${LINK_SEGMENT}"
@@ -184,7 +185,7 @@ collect_data () {
             log_term 1 "Collecting data from: ${_GITHUB_URL}"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             _INTERNAL_DATA="${_INTERNAL_DATA} $(get_data "${_GITHUB_URL}")"
-            let DONE=1
+            DONE=1
         fi
     done
     echo "${_INTERNAL_DATA}"
@@ -448,7 +449,7 @@ get_set_milestone () {
 create_milestones () {
     local _RELEASE="${1}"
     shift
-    declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
+    IFS_SAVE="$IFS"; read -r -a MILESTONE_REPOSITORY_ARRAY <<< "${@}"; IFS="$IFS_SAVE"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae nubber required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -462,7 +463,7 @@ create_milestones () {
         local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${REPOSITORY}")
         log_term 1 "Got milestone number \"${_MILESTONE}\"."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        let _COUNT=${_COUNT}+1
+        _COUNT=$((_COUNT + 1))
     done
     unset REPOSITORY MILESTONE_REPOSITORY_ARRAY
 }
@@ -470,7 +471,7 @@ create_milestones () {
 close_milestones () {
     local _RELEASE="${1}"
     shift
-    declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
+    IFS_SAVE="$IFS"; read -r -a MILESTONE_REPOSITORY_ARRAY <<< "${@}"; IFS="$IFS_SAVE"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
         log_term 0 "Relesae nubber required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -484,7 +485,7 @@ close_milestones () {
         local _MILESTONE; _MILESTONE=$(get_set_milestone "${_RELEASE}" "${REPOSITORY}" "Close")
         log_term 1 "Got milestone number \"${_MILESTONE}\"."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        let _COUNT=${_COUNT}+1
+        _COUNT=$((_COUNT + 1))
     done
     unset REPOSITORY MILESTONE_REPOSITORY_ARRAY
 }
@@ -507,7 +508,7 @@ get_release_issue () {
     local _ISSUE_COUNT=0
     for ISSUE in ${_ISSUE_NUMBER}; do
         log_term 3 "Got issue '${ISSUE}'"
-        let _ISSUE_COUNT+=1
+        _ISSUE_COUNT=$((_ISSUE_COUNT + 1))
     done
     if (( "${_ISSUE_COUNT}" == 0 )); then
         log_term 0 "Warning: Release issue not found."

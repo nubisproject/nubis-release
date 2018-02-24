@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 #
 # These functions drive nubis-builder
 #
