@@ -587,7 +587,7 @@ check_in_changes () {
         CONTINUE='y'
     fi
     if [ ${CONTINUE:-y} == "Y" ] || [ ${CONTINUE:-y} == "y" ]; then
-        log_term 1 "\nChecking in chenges to '${_FILE}' for \"${_REPOSITORY}\"." -e
+        log_term 1 "\nChecking in changes to '${_FILE}' for \"${_REPOSITORY}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git add ${_FILE}
         cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git commit -m "${_MESSAGE} [skip ci]"
