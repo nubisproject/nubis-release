@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 #
 # Here are all of the functions to edit various files during a release
 #

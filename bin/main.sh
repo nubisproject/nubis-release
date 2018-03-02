@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 
 # Make sure we capture failures from pipe commands
 set -o pipefail
@@ -264,7 +265,7 @@ while [ "$1" != "" ]; do
         close-milestones )
             RELEASE="${2}"
             shift 2
-            declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
+            IFS_SAVE="$IFS"; read -r -a MILESTONE_REPOSITORY_ARRAY <<< "${@}"; IFS="$IFS_SAVE"
             source_files || exit 1
             close_milestones "${RELEASE}" "${MILESTONE_REPOSITORY_ARRAY[@]}"
             GOT_COMMAND=1
@@ -279,7 +280,7 @@ while [ "$1" != "" ]; do
         create-milestones )
             RELEASE="${2}"
             shift 2
-            declare -a MILESTONE_REPOSITORY_ARRAY=( ${@} )
+            IFS_SAVE="$IFS"; read -r -a MILESTONE_REPOSITORY_ARRAY <<< "${@}"; IFS="$IFS_SAVE"
             source_files || exit 1
             create_milestones "${RELEASE}" "${MILESTONE_REPOSITORY_ARRAY[@]}"
             GOT_COMMAND=1

@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 
 # The docker container to use for the release
 DOCKER_RELEASE_CONTAINER='nubisproject/nubis-release:v0.2.0'
@@ -70,11 +71,19 @@ fi
 # Set up the main.sh command
 setup_main_command () {
     if [ "${USE_DOCKER:-'NULL'}" == 'FALSE' ]; then
-        MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        if [ ${#VERBOSE} != 0 ]; then
+            MAIN_EXEC=( './main.sh' '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        else
+            MAIN_EXEC=( './main.sh' '--non-interactive' '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        fi
     else
         local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
         declare -a DOCKER_COMMAND=( 'docker' 'run' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' "${DOCKER_RELEASE_CONTAINER}" )
-        MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        if [ ${#VERBOSE} != 0 ]; then
+            MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        else
+            MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        fi
     fi
     AWS_VAULT_EXEC_MAIN=( "${AWS_VAULT_EXEC[@]}" "${MAIN_EXEC[@]}" )
 }
@@ -92,7 +101,7 @@ upload_lambda_functions () {
     local -r _S3_BUCKET="${2}"
     local -r _SKIP_RELEASE="${3}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -121,7 +130,7 @@ upload_lambda_functions () {
             "${AWS_VAULT_EXEC_MAIN[@]}" upload-assets --multi-region --bucket "${_S3_BUCKET}" --release "${_RELEASE}" push-lambda "${LAMBDA_FUNCTION}" || exit 1
 
         fi
-        let _COUNT=${_COUNT}+1
+        _COUNT=$((_COUNT + 1))
     done
     unset LAMBDA_FUNCTION
 }
@@ -131,7 +140,7 @@ release_no_build_repositories () {
     local -r _RELEASE="${1}"
     local -r _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -148,7 +157,7 @@ release_no_build_repositories () {
                 log_term 0 "\n******** Release of repository\"${REPOSITORY}\" Failed! ********" -e
                 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             fi
-            let _COUNT=${_COUNT}+1
+        _COUNT=$((_COUNT + 1))
         done
         unset REPOSITORY
     # This is a special edit to update the pinned version number to 'develop' for terraform modules in nubis-deploy
@@ -167,7 +176,7 @@ release_nubis_base_repository () {
     local -r _RELEASE="${1}"
     local -r _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -196,7 +205,7 @@ release_build_repositories () {
     local -r _RELEASE="${1}"
     local -r _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -220,7 +229,7 @@ build_and_release_all () {
     local -r _RELEASE="${1}"
     local _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -247,7 +256,7 @@ build_and_release_all () {
     unset _VAULT_PROFILE _VAULT_ACCOUNT
 
     log_term 0 '\nIf you care to monitor the build progress:' -e
-    log_term 0 'tail -f logs/1/*/stdout logs/1/*/stderr'
+    log_term 0 'tail -f bin/logs/1/*/stdout bin/logs/1/*/stderr'
 
     # Build and release nubis-base
     # All other infrastructure builds are built from nubis-base, we need to build it first
@@ -268,7 +277,7 @@ build_and_release_all () {
 create-milestones () {
     local -r _RELEASE="${1}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "${MAIN_EXEC[@]}" help
         exit 1
@@ -279,7 +288,8 @@ create-milestones () {
 }
 
 release-do () {
-    declare -a _ACTION; _ACTION=( ${@} )
+    test_for_parallel
+    IFS_SAVE="$IFS"; read -r -a _ACTION <<< "${@}"; IFS="$IFS_SAVE"
     cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${MAIN_EXEC[@]}" "${_ACTION[@]}" ; then
         log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
@@ -289,7 +299,8 @@ release-do () {
 }
 
 release-do-vault () {
-    declare -a _ACTION; _ACTION=( ${@} )
+    test_for_parallel
+    IFS_SAVE="$IFS"; read -r -a _ACTION <<< "${@}"; IFS="$IFS_SAVE"
     cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${AWS_VAULT_EXEC_MAIN[@]}" "${_ACTION[@]}" ; then
         log_term 0 "\n******** Action \"${_ACTION[*]}\" Failed! ********" -e
@@ -299,10 +310,8 @@ release-do-vault () {
 }
 
 instructions () {
-    test_for_rvm
     echo -e "\n\e[1;4;33mNormal Release Instructions:\e[0m\n"
-#    echo "rvm use 2.1"
-    echo "RELEASE='v2.0.x'"
+    echo "RELEASE='v2.1.x'"
     echo "$0 -v build-and-release-all \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables_local.sh"
     echo "vi ./variables_local.sh"
@@ -317,9 +326,8 @@ instructions () {
     echo "$0 -v build-all \${RELEASE}"
 
     echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
-#    echo "rvm use 2.1"
-    echo "RELEASE='v2.0.2' # The new release number."
-    echo "RELEASE_TO_PATCH='v2.0.1' # The previous release we are going to patch."
+    echo "RELEASE='v2.1.2' # The new release number."
+    echo "RELEASE_TO_PATCH='v2.1.1' # The previous release we are going to patch."
     echo "$0 -v --patch \${RELEASE_TO_PATCH} build-and-release-all \${RELEASE}"
     echo "Using the nubis-docs/templates/announce.txt send an email to:"
     echo "nubis-announce@googlegroups.com infra-systems@mozilla.com infra-webops@mozilla.com itleadership@mozilla.com moc@mozilla.com"
@@ -365,7 +373,7 @@ while [ "$1" != "" ]; do
             USE_DOCKER='FALSE'
         ;;
         -i | --instructions )
-            $0 instructions
+            instructions
             GOT_COMMAND=1
         ;;
         -l | --local )
