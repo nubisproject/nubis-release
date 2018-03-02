@@ -288,6 +288,7 @@ create-milestones () {
 }
 
 release-do () {
+    test_for_parallel
     IFS_SAVE="$IFS"; read -r -a _ACTION <<< "${@}"; IFS="$IFS_SAVE"
     cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${MAIN_EXEC[@]}" "${_ACTION[@]}" ; then
@@ -298,6 +299,7 @@ release-do () {
 }
 
 release-do-vault () {
+    test_for_parallel
     IFS_SAVE="$IFS"; read -r -a _ACTION <<< "${@}"; IFS="$IFS_SAVE"
     cd "${SCRIPT_PATH}/bin" || exit 1
     if ! "${AWS_VAULT_EXEC_MAIN[@]}" "${_ACTION[@]}" ; then
