@@ -4,7 +4,7 @@
 # This is the general variables file
 
 # Set the version of the builder docker container
-NUBIS_BUILDER_VERSION="v1.6.0"
+NUBIS_BUILDER_VERSION="v1.8.0"
 log_term 2 "NUBIS_BUILDER_VERSION=${NUBIS_BUILDER_VERSION}"
 log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
