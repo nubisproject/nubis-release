@@ -1,9 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC1117
 
-# The docker container to use for the release
-DOCKER_RELEASE_CONTAINER='nubisproject/nubis-release:v0.2.0'
-
 # Make sure we capture failures from pipe commands
 set -o pipefail
 
@@ -77,6 +74,21 @@ setup_main_command () {
             MAIN_EXEC=( './main.sh' '--non-interactive' '--oath-token' "${GITHUB_OATH_TOKEN}" )
         fi
     else
+        # The docker container to use for the release
+        if [ "${USE_LOCAL_DOCKER:-0}" == 'true' ]; then
+            DOCKER_RELEASE_CONTAINER="nubis-release"
+        else
+            NUBIS_DEPLOY_VERSION=$(curl -k -s -S \
+                "https://registry.hub.docker.com/v1/repositories/nubisproject/nubis-release/tags" \
+                | docker run -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
+                | sort --field-separator=. --numeric-sort --reverse \
+                | grep -m 1 "^v")
+            if [ -z "${NUBIS_DEPLOY_VERSION}" ]; then
+                echo -e "\033[1;31mERROR: Unable to find nubis-release version\033[0m"
+                exit 1
+            fi
+            DOCKER_RELEASE_CONTAINER="nubisproject/nubis-release:${NUBIS_DEPLOY_VERSION}"
+        fi
         local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
         declare -a DOCKER_COMMAND=( 'docker' 'run' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' "${DOCKER_RELEASE_CONTAINER}" )
         if [ ${#VERBOSE} != 0 ]; then
@@ -378,7 +390,7 @@ while [ "$1" != "" ]; do
         ;;
         -l | --local )
             # Use a local build of the container instead of the one on dockerhub
-            DOCKER_RELEASE_CONTAINER='nubis-release'
+            USE_LOCAL_DOCKER='true'
         ;;
         --patch )
             # The release number to patch from (tag to check out as starting point for release)
