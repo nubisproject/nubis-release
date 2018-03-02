@@ -238,6 +238,7 @@ release_build_repositories () {
 }
 
 build_and_release_all () {
+    test_for_parallel
     local -r _RELEASE="${1}"
     local _SKIP_RELEASE="${2}"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
