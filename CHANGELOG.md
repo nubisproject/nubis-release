@@ -1,5 +1,23 @@
 # Change Log
 
+## [v0.3.0](https://github.com/nubisproject/nubis-release/tree/v0.3.0) (2018-03-02)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.2.0...v0.3.0)
+
+**Closed issues:**
+
+- Dependency check for parallel [\#54](https://github.com/nubisproject/nubis-release/issues/54)
+
+**Merged pull requests:**
+
+- Update the nubis-builder version [\#58](https://github.com/nubisproject/nubis-release/pull/58) ([tinnightcap](https://github.com/tinnightcap))
+- Test for parallel sooner [\#56](https://github.com/nubisproject/nubis-release/pull/56) ([tinnightcap](https://github.com/tinnightcap))
+- Fix typo [\#55](https://github.com/nubisproject/nubis-release/pull/55) ([limed](https://github.com/limed))
+- Migrate to new nubis-travis [\#53](https://github.com/nubisproject/nubis-release/pull/53) ([tinnightcap](https://github.com/tinnightcap))
+- Remove rvm cruft [\#52](https://github.com/nubisproject/nubis-release/pull/52) ([tinnightcap](https://github.com/tinnightcap))
+- Fix -i [\#51](https://github.com/nubisproject/nubis-release/pull/51) ([tinnightcap](https://github.com/tinnightcap))
+- Fix issue when no '-v' flag is passed [\#50](https://github.com/nubisproject/nubis-release/pull/50) ([tinnightcap](https://github.com/tinnightcap))
+- Fixing some typos [\#49](https://github.com/nubisproject/nubis-release/pull/49) ([limed](https://github.com/limed))
+
 ## [v0.2.0](https://github.com/nubisproject/nubis-release/tree/v0.2.0) (2018-01-19)
 [Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.1.0...v0.2.0)
 
@@ -7,9 +25,12 @@
 
 - Don't use CHANGELOG\_GITHUB\_TOKEN for github permission API [\#15](https://github.com/nubisproject/nubis-release/issues/15)
 - Create docker container with all dependencies [\#8](https://github.com/nubisproject/nubis-release/issues/8)
+- Tag v0.2.0 release [\#46](https://github.com/nubisproject/nubis-release/issues/46)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v0.2.0 release \[skip ci\] [\#48](https://github.com/nubisproject/nubis-release/pull/48) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.2.0 release \[skip ci\] [\#47](https://github.com/nubisproject/nubis-release/pull/47) ([nubis-automation](https://github.com/nubis-automation))
 - Updates for lambda functions [\#45](https://github.com/nubisproject/nubis-release/pull/45) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v0.1.0](https://github.com/nubisproject/nubis-release/tree/v0.1.0) (2018-01-19)
