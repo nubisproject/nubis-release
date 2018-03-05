@@ -10,6 +10,8 @@ shopt -s extglob
 # Set up our path for later use
 SCRIPT_PATH="$PWD"
 
+NUBIS_JQ_VERSION='v0.1.0'
+
 # This function sets up logging, debugging and terminal output on std error
 # Level 0 is always logged
 # Level 1 through 3 are set on the command line
