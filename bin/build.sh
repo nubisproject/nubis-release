@@ -38,7 +38,7 @@ build_amis () {
         exit 1
     fi
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "$0" help
         exit 1
