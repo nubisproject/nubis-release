@@ -80,6 +80,7 @@ setup_main_command () {
         if [ "${USE_LOCAL_DOCKER:-0}" == 'true' ]; then
             DOCKER_RELEASE_CONTAINER="nubis-release"
         else
+            JQ_DOCKER_IMAGE="nubisproject/nubis-jq:${NUBIS_JQ_VERSION}"
             NUBIS_DEPLOY_VERSION=$(curl -k -s -S \
                 "https://registry.hub.docker.com/v1/repositories/nubisproject/nubis-release/tags" \
                 | docker run -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
