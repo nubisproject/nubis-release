@@ -10,6 +10,8 @@ shopt -s extglob
 # Set up our path for later use
 SCRIPT_PATH="$PWD"
 
+NUBIS_JQ_VERSION='v0.1.0'
+
 # This function sets up logging, debugging and terminal output on std error
 # Level 0 is always logged
 # Level 1 through 3 are set on the command line
@@ -78,6 +80,7 @@ setup_main_command () {
         if [ "${USE_LOCAL_DOCKER:-0}" == 'true' ]; then
             DOCKER_RELEASE_CONTAINER="nubis-release"
         else
+            JQ_DOCKER_IMAGE="nubisproject/nubis-jq:${NUBIS_JQ_VERSION}"
             NUBIS_DEPLOY_VERSION=$(curl -k -s -S \
                 "https://registry.hub.docker.com/v1/repositories/nubisproject/nubis-release/tags" \
                 | docker run -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
