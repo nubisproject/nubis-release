@@ -321,7 +321,7 @@ create_release_branch () {
     fi
     # Ensure the repository exists in the repository path
     if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
-        log_term 0 "Repository '${_REPOSITORY}' not chekced out out in repository path '${REPOSITORY_PATH}'!"
+        log_term 0 "Repository '${_REPOSITORY}' not checked out out in repository path '${REPOSITORY_PATH}'!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
@@ -451,7 +451,7 @@ create_milestones () {
     shift
     IFS_SAVE="$IFS"; read -r -a MILESTONE_REPOSITORY_ARRAY <<< "${@}"; IFS="$IFS_SAVE"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae nubber required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
@@ -473,7 +473,7 @@ close_milestones () {
     shift
     IFS_SAVE="$IFS"; read -r -a MILESTONE_REPOSITORY_ARRAY <<< "${@}"; IFS="$IFS_SAVE"
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae nubber required"
+        log_term 0 "Relesae number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
@@ -769,7 +769,7 @@ merge_release_branch_to_named_branch () {
     fi
     # Ensure the repository exists in the repository path
     if [ ! -d "${REPOSITORY_PATH}"/"${_REPOSITORY}" ]; then
-        log_term 0 "Repository '${_REPOSITORY}' not chekced out out in repository path '${REPOSITORY_PATH}'!"
+        log_term 0 "Repository '${_REPOSITORY}' not checked out out in repository path '${REPOSITORY_PATH}'!"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit 1
     fi
@@ -845,7 +845,7 @@ tag_and_release_repository () {
         exit 1
     fi
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
@@ -909,7 +909,7 @@ repository_setup_release () {
         exit 1
     fi
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1
@@ -954,7 +954,7 @@ repository_complete_release () {
         exit 1
     fi
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         $0 help
         exit 1

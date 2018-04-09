@@ -4,27 +4,6 @@
 # These functions drive nubis-builder
 #
 
-# Clean up any librarian-puppet files
-clean_librarian_puppet () {
-    local -r _REPOSITORY="${1}"
-    if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
-        log_term 0 "Repository required"
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        "$0" help
-        exit 1
-    fi
-    if [ -f "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile" ]; then
-        log_term 1 "Cleaning librarian-puppet files..."
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        exec 5>&1
-        OUTPUT=$(cd "${REPOSITORY_PATH}/${_REPOSITORY}/nubis" && librarian-puppet clean | tee >(cat - >&5))
-        if [ -f "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile.lock" ]; then
-            OUTPUT=$(rm "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile.lock" | tee >(cat - >&5))
-        fi
-        exec 5>&-
-    fi
-}
-
 # Build new AMIs for the named repository
 build_amis () {
     test_for_docker
@@ -38,7 +17,7 @@ build_amis () {
         exit 1
     fi
     if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
-        log_term 0 "Relesae number required"
+        log_term 0 "Release number required"
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         "$0" help
         exit 1
@@ -54,7 +33,6 @@ build_amis () {
     fi
 
     edit_project_json "${_RELEASE}" "${_REPOSITORY}"
-    clean_librarian_puppet "${_REPOSITORY}"
 
     log_term 0 "Running nubis-builder for ${_REPOSITORY}"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -62,7 +40,7 @@ build_amis () {
     cd "${REPOSITORY_PATH}/${_REPOSITORY}" || exit 1
     # Make this command a bit more readable
     #+ NOTE: NUBIS_BUILDER_VERSION and AMI_COPY_REGIONS are set in the top level variables file
-    NUBIS_DOCKER=( 'docker' 'run' \
+    NUBIS_DOCKER=( 'docker' 'run' '-rm' \
                 '-u' "$UID:$(id -g)" \
                 '--env-file' '/nubis/bin/docker_env' \
                 '--mount' 'source=nubis-release,target=/nubis/data' \
