@@ -1,14 +1,35 @@
 # Change Log
 
+## [v0.4.0](https://github.com/nubisproject/nubis-release/tree/v0.4.0) (2018-04-09)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.3.0...v0.4.0)
+
+**Closed issues:**
+
+- Bump releases for nubis-terraform-vpn and nubis-terraform//images [\#68](https://github.com/nubisproject/nubis-release/issues/68)
+- Change \e to \033 for all escape sequences [\#67](https://github.com/nubisproject/nubis-release/issues/67)
+- Error message during build-all [\#57](https://github.com/nubisproject/nubis-release/issues/57)
+
+**Merged pull requests:**
+
+- Clone nubis-deploy during vx.x.x-dev builds [\#70](https://github.com/nubisproject/nubis-release/pull/70) ([tinnightcap](https://github.com/tinnightcap))
+- Bump new repos [\#69](https://github.com/nubisproject/nubis-release/pull/69) ([gozer](https://github.com/gozer))
+- Add missing vriable [\#65](https://github.com/nubisproject/nubis-release/pull/65) ([tinnightcap](https://github.com/tinnightcap))
+- Fixing a bunch of typos [\#64](https://github.com/nubisproject/nubis-release/pull/64) ([limed](https://github.com/limed))
+- Test in one more place sooner [\#63](https://github.com/nubisproject/nubis-release/pull/63) ([tinnightcap](https://github.com/tinnightcap))
+- Auto-detect docker version to use for the release [\#62](https://github.com/nubisproject/nubis-release/pull/62) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v0.3.0](https://github.com/nubisproject/nubis-release/tree/v0.3.0) (2018-03-02)
 [Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.2.0...v0.3.0)
 
 **Closed issues:**
 
 - Dependency check for parallel [\#54](https://github.com/nubisproject/nubis-release/issues/54)
+- Tag v0.3.0 release [\#59](https://github.com/nubisproject/nubis-release/issues/59)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v0.3.0 release \[skip ci\] [\#61](https://github.com/nubisproject/nubis-release/pull/61) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.3.0 release \[skip ci\] [\#60](https://github.com/nubisproject/nubis-release/pull/60) ([nubis-automation](https://github.com/nubis-automation))
 - Update the nubis-builder version [\#58](https://github.com/nubisproject/nubis-release/pull/58) ([tinnightcap](https://github.com/tinnightcap))
 - Test for parallel sooner [\#56](https://github.com/nubisproject/nubis-release/pull/56) ([tinnightcap](https://github.com/tinnightcap))
 - Fix typo [\#55](https://github.com/nubisproject/nubis-release/pull/55) ([limed](https://github.com/limed))
