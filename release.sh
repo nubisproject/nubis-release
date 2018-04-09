@@ -83,7 +83,7 @@ setup_main_command () {
             JQ_DOCKER_IMAGE="nubisproject/nubis-jq:${NUBIS_JQ_VERSION}"
             NUBIS_RELEASE_VERSION=$(curl -k -s -S \
                 "https://registry.hub.docker.com/v1/repositories/nubisproject/nubis-release/tags" \
-                | docker run -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
+                | docker run --rm -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
                 | sort --field-separator=. --numeric-sort --reverse \
                 | grep -m 1 "^v")
             if [ -z "${NUBIS_RELEASE_VERSION}" ]; then
