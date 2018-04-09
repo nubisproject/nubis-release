@@ -65,6 +65,14 @@ edit_deploy_templates () {
         _REF="${_GIT_SHA}"
     fi
 
+    # If the nubis-deploy repository does not exist in the repository path, clone it
+    if [ ! -d "${REPOSITORY_PATH}/nubis-deploy" ]; then
+        log_term 1 "Directory \"${REPOSITORY_PATH}/nubis-deploy\" does not exists. Cloning."
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        clone_repository 'nubis-deploy' || exit 1
+        cd "${REPOSITORY_PATH}/nubis-deploy" || exit 1
+    fi
+
     ENTRY_PWD=$(pwd)
 
     local _VPC_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/vpc/main.tf"
@@ -82,6 +90,7 @@ edit_deploy_templates () {
 
     # Check in the edits
     #+ Unless we are on master or develop (assume these are test builds)
+    #+ Unless this is a 'vx.x.x-dev' build
     local _CURRENT_BRANCH; _CURRENT_BRANCH=$(git branch | cut -d' ' -f 2)
     local _SKIP_BRANCHES="^(master|develop)$"
     local _RELEASE_REGEX="^(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))-dev$"

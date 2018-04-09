@@ -4,27 +4,6 @@
 # These functions drive nubis-builder
 #
 
-# Clean up any librarian-puppet files
-clean_librarian_puppet () {
-    local -r _REPOSITORY="${1}"
-    if [ "${_REPOSITORY:-NULL}" == 'NULL' ]; then
-        log_term 0 "Repository required"
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        "$0" help
-        exit 1
-    fi
-    if [ -f "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile" ]; then
-        log_term 1 "Cleaning librarian-puppet files..."
-        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        exec 5>&1
-        OUTPUT=$(cd "${REPOSITORY_PATH}/${_REPOSITORY}/nubis" && librarian-puppet clean | tee >(cat - >&5))
-        if [ -f "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile.lock" ]; then
-            OUTPUT=$(rm "${REPOSITORY_PATH}/${_REPOSITORY}/nubis/Puppetfile.lock" | tee >(cat - >&5))
-        fi
-        exec 5>&-
-    fi
-}
-
 # Build new AMIs for the named repository
 build_amis () {
     test_for_docker
@@ -54,7 +33,6 @@ build_amis () {
     fi
 
     edit_project_json "${_RELEASE}" "${_REPOSITORY}"
-    clean_librarian_puppet "${_REPOSITORY}"
 
     log_term 0 "Running nubis-builder for ${_REPOSITORY}"
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
