@@ -81,19 +81,19 @@ setup_main_command () {
             DOCKER_RELEASE_CONTAINER="nubis-release"
         else
             JQ_DOCKER_IMAGE="nubisproject/nubis-jq:${NUBIS_JQ_VERSION}"
-            NUBIS_DEPLOY_VERSION=$(curl -k -s -S \
+            NUBIS_RELEASE_VERSION=$(curl -k -s -S \
                 "https://registry.hub.docker.com/v1/repositories/nubisproject/nubis-release/tags" \
-                | docker run -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
+                | docker run --rm -i "${JQ_DOCKER_IMAGE}" jq --raw-output '.[]["name"] // empty' \
                 | sort --field-separator=. --numeric-sort --reverse \
                 | grep -m 1 "^v")
-            if [ -z "${NUBIS_DEPLOY_VERSION}" ]; then
+            if [ -z "${NUBIS_RELEASE_VERSION}" ]; then
                 echo -e "\033[1;31mERROR: Unable to find nubis-release version\033[0m"
                 exit 1
             fi
-            DOCKER_RELEASE_CONTAINER="nubisproject/nubis-release:${NUBIS_DEPLOY_VERSION}"
+            DOCKER_RELEASE_CONTAINER="nubisproject/nubis-release:${NUBIS_RELEASE_VERSION}"
         fi
         local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
-        declare -a DOCKER_COMMAND=( 'docker' 'run' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' "${DOCKER_RELEASE_CONTAINER}" )
+        declare -a DOCKER_COMMAND=( 'docker' 'run' '--rm' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' "${DOCKER_RELEASE_CONTAINER}" )
         if [ ${#VERBOSE} != 0 ]; then
             MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
         else
@@ -180,7 +180,6 @@ release_no_build_repositories () {
     elif [[ "${_RELEASE}" =~ ${_RELEASE_REGEX} ]]; then
         # https://github.com/koalaman/shellcheck/wiki/SC1091
         # shellcheck disable=SC1091
-        source edit.sh
         "${MAIN_EXEC[@]}" edit --release "${_RELEASE}" --git-sha 'develop' nubis-deploy
     fi
 }
@@ -233,8 +232,8 @@ release_build_repositories () {
     fi
     log_term 1 "\n${COMMAND} \"${#BUILD_REPOSITORIES[*]}\" repositories at \"${_RELEASE}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-#    parallel --no-notice --output-as-files --results logs --progress --jobs "${#BUILD_REPOSITORIES[@]}" "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
-    parallel --no-notice --output-as-files --results logs --progress --jobs 4 "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
+    parallel --no-notice --output-as-files --results logs --progress --jobs "${#BUILD_REPOSITORIES[@]}" "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
+#    parallel --no-notice --output-as-files --results logs --progress --jobs 4 "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
     if [ "${_RV:-0}" != '0' ]; then
         log_term 0 "\n!!!!! ${_RV} builds failed failed. Inspect output logs. !!!!!" -e
     fi; unset _RV
@@ -326,7 +325,7 @@ release-do-vault () {
 }
 
 instructions () {
-    echo -e "\n\e[1;4;33mNormal Release Instructions:\e[0m\n"
+    echo -e "\n\033[1;4;33mNormal Release Instructions:\033[0m\n"
     echo "RELEASE='v2.1.x'"
     echo "$0 -v build-and-release-all \${RELEASE}"
     echo "Update \"RELEASE_DATES\" in variables_local.sh"
@@ -341,7 +340,7 @@ instructions () {
     echo "$0 -v create-milestones \${RELEASE}"
     echo "$0 -v build-all \${RELEASE}"
 
-    echo -e "\n\n\e[1;4;33mPatch release Instructions:\e[0m\n"
+    echo -e "\n\n\033[1;4;33mPatch release Instructions:\033[0m\n"
     echo "RELEASE='v2.1.2' # The new release number."
     echo "RELEASE_TO_PATCH='v2.1.1' # The previous release we are going to patch."
     echo "$0 -v --patch \${RELEASE_TO_PATCH} build-and-release-all \${RELEASE}"

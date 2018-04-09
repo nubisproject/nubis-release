@@ -99,13 +99,13 @@ release_stats () {
         log_term 0 "\nYou must pass in the release dates to get accurate links with this function." -e
         exit 1
     fi
-    echo -e "\n\e[1;4;33mPull Requests Merged:\e[0m\n"
+    echo -e "\n\033[1;4;33mPull Requests Merged:\033[0m\n"
     echo "https://github.com/pulls?utf8=%E2%9C%93&q=is%3Apr+user%3ANubisproject+merged%3A${RELEASE_DATES}+"
-    echo -e "\n\e[1;4;33mIssues Opened Since Last Release:\e[0m\n"
+    echo -e "\n\033[1;4;33mIssues Opened Since Last Release:\033[0m\n"
     echo "https://github.com/issues?utf8=%E2%9C%93&q=is%3Aissue+user%3Anubisproject+created%3A${RELEASE_DATES}+"
-    echo -e "\n\e[1;4;33mIssues Closed:\e[0m\n"
+    echo -e "\n\033[1;4;33mIssues Closed:\033[0m\n"
     echo "https://github.com/issues?utf8=%E2%9C%93&q=is%3Aclosed+is%3Aissue+user%3Anubisproject+closed%3A${RELEASE_DATES}"
-    echo -e "\n\e[1;4;33mIssues Remaining:\e[0m\n"
+    echo -e "\n\033[1;4;33mIssues Remaining:\033[0m\n"
     echo "https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+user%3Anubisproject"
 }
 
@@ -220,12 +220,6 @@ while [ "$1" != "" ]; do
             build_amis "${REPOSITORY}" "${RELEASE}" "${SKIP_CLONE}"
             GOT_COMMAND=1
         ;;
-        build-all )
-            RELEASE="${2}"
-            source_files || exit 1
-            build_and_release_all "${RELEASE}" 'skip-release'
-            GOT_COMMAND=1
-        ;;
         build-and-release )
             REPOSITORY="${2}"
             RELEASE="${3}"
@@ -254,12 +248,6 @@ while [ "$1" != "" ]; do
                 log_term 0 "Aborting....."
                 exit 1
             fi
-            GOT_COMMAND=1
-        ;;
-        build-and-release-all )
-            RELEASE="${2}"
-            source_files || exit 1
-            build_and_release_all "${RELEASE}"
             GOT_COMMAND=1
         ;;
         close-milestones )
@@ -304,11 +292,6 @@ while [ "$1" != "" ]; do
             RELEASE_DATES="${2}"
             source_files || exit 1
             release_stats "${RELEASE_DATES}"
-            GOT_COMMAND=1
-        ;;
-        install-rvm )
-            source_files || exit 1
-            install_rvm
             GOT_COMMAND=1
         ;;
         release )
