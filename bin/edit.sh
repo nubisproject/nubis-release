@@ -87,6 +87,8 @@ edit_deploy_templates () {
     sed -i "s:nubis-prometheus//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-prometheus//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-ci//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-ci//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-sso//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-sso//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-terraform-vpn?ref=${_RELEASE_REGEX}:nubis-terraform-vpn?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-terraform//images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${_VPC_FILE}"
 
     # Check in the edits
     #+ Unless we are on master or develop (assume these are test builds)
