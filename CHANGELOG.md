@@ -1,5 +1,12 @@
 # Change Log
 
+## [v0.5.0](https://github.com/nubisproject/nubis-release/tree/v0.5.0) (2018-04-10)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.4.0...v0.5.0)
+
+**Merged pull requests:**
+
+- Typo fix [\#74](https://github.com/nubisproject/nubis-release/pull/74) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v0.4.0](https://github.com/nubisproject/nubis-release/tree/v0.4.0) (2018-04-09)
 [Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.3.0...v0.4.0)
 
@@ -8,9 +15,12 @@
 - Bump releases for nubis-terraform-vpn and nubis-terraform//images [\#68](https://github.com/nubisproject/nubis-release/issues/68)
 - Change \e to \033 for all escape sequences [\#67](https://github.com/nubisproject/nubis-release/issues/67)
 - Error message during build-all [\#57](https://github.com/nubisproject/nubis-release/issues/57)
+- Tag v0.4.0 release [\#71](https://github.com/nubisproject/nubis-release/issues/71)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v0.4.0 release \[skip ci\] [\#73](https://github.com/nubisproject/nubis-release/pull/73) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.4.0 release \[skip ci\] [\#72](https://github.com/nubisproject/nubis-release/pull/72) ([nubis-automation](https://github.com/nubis-automation))
 - Clone nubis-deploy during vx.x.x-dev builds [\#70](https://github.com/nubisproject/nubis-release/pull/70) ([tinnightcap](https://github.com/tinnightcap))
 - Bump new repos [\#69](https://github.com/nubisproject/nubis-release/pull/69) ([gozer](https://github.com/gozer))
 - Add missing vriable [\#65](https://github.com/nubisproject/nubis-release/pull/65) ([tinnightcap](https://github.com/tinnightcap))
