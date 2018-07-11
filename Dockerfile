@@ -7,8 +7,8 @@ FROM alpine:3.6 AS build-hub
 RUN apk add --no-cache \
     bash \
     go=1.8.4-r0 \
-    libc-dev=0.7.1-r \
-    git=2.13.5-r0
+    libc-dev=0.7.1-r0 \
+    git=2.13.7-r0
 WORKDIR /app
 RUN ["/bin/bash", "-c", "set -o pipefail \
     && git clone https://github.com/github/hub.git \
