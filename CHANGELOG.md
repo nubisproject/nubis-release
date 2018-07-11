@@ -1,10 +1,27 @@
 # Change Log
 
-## [v0.5.0](https://github.com/nubisproject/nubis-release/tree/v0.5.0) (2018-04-10)
-[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.4.0...v0.5.0)
+## [v0.5.1](https://github.com/nubisproject/nubis-release/tree/v0.5.1) (2018-07-11)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.5.0...v0.5.1)
+
+**Closed issues:**
+
+- Update branch protection to include new cloud eng team [\#78](https://github.com/nubisproject/nubis-release/issues/78)
 
 **Merged pull requests:**
 
+- Include new team in branch protection [\#79](https://github.com/nubisproject/nubis-release/pull/79) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v0.5.0](https://github.com/nubisproject/nubis-release/tree/v0.5.0) (2018-04-10)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.4.0...v0.5.0)
+
+**Closed issues:**
+
+- Tag v0.5.0 release [\#75](https://github.com/nubisproject/nubis-release/issues/75)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v0.5.0 release \[skip ci\] [\#77](https://github.com/nubisproject/nubis-release/pull/77) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.5.0 release \[skip ci\] [\#76](https://github.com/nubisproject/nubis-release/pull/76) ([nubis-automation](https://github.com/nubis-automation))
 - Typo fix [\#74](https://github.com/nubisproject/nubis-release/pull/74) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v0.4.0](https://github.com/nubisproject/nubis-release/tree/v0.4.0) (2018-04-09)
