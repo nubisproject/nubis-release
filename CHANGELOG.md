@@ -1,14 +1,24 @@
 # Change Log
 
+## [v0.5.2](https://github.com/nubisproject/nubis-release/tree/v0.5.2) (2018-07-11)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.5.1...v0.5.2)
+
+**Merged pull requests:**
+
+- Bump Alpine package versions for build dependancy [\#83](https://github.com/nubisproject/nubis-release/pull/83) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v0.5.1](https://github.com/nubisproject/nubis-release/tree/v0.5.1) (2018-07-11)
 [Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.5.0...v0.5.1)
 
 **Closed issues:**
 
 - Update branch protection to include new cloud eng team [\#78](https://github.com/nubisproject/nubis-release/issues/78)
+- Tag v0.5.1 release [\#80](https://github.com/nubisproject/nubis-release/issues/80)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v0.5.1 release \[skip ci\] [\#82](https://github.com/nubisproject/nubis-release/pull/82) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.5.1 release \[skip ci\] [\#81](https://github.com/nubisproject/nubis-release/pull/81) ([nubis-automation](https://github.com/nubis-automation))
 - Include new team in branch protection [\#79](https://github.com/nubisproject/nubis-release/pull/79) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v0.5.0](https://github.com/nubisproject/nubis-release/tree/v0.5.0) (2018-04-10)
