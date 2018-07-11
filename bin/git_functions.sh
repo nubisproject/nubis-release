@@ -621,6 +621,7 @@ repository_set_permissions () {
       "users": [
       ],
       "teams": [
+        "cloud-engineering"
       ]
     },
     "dismiss_stale_reviews": true,
