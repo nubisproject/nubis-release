@@ -947,7 +947,7 @@ repository_setup_release () {
     fi
 
     # Update the pinned version number to the current ${_RELEASE}
-    #+ for released Trraform modules
+    #+ for released Terraform modules
     log_term 1 "\nEditing Terraform templates for repository: \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     edit_terraform_templates "${_RELEASE}"
