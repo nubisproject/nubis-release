@@ -232,8 +232,7 @@ release_build_repositories () {
     fi
     log_term 1 "\n${COMMAND} \"${#BUILD_REPOSITORIES[*]}\" repositories at \"${_RELEASE}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    parallel --no-notice --output-as-files --results logs --progress --jobs "${#BUILD_REPOSITORIES[@]}" "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
-#    parallel --no-notice --output-as-files --results logs --progress --jobs 4 "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
+    parallel --no-notice --output-as-files --results logs --progress --jobs 6 "${AWS_VAULT_EXEC_MAIN[@]}" "${COMMAND}" '{1}' "${_RELEASE}" ::: "${BUILD_REPOSITORIES[@]}"; _RV=$?
     if [ "${_RV:-0}" != '0' ]; then
         log_term 0 "\n!!!!! ${_RV} builds failed failed. Inspect output logs. !!!!!" -e
     fi; unset _RV

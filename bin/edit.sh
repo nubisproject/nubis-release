@@ -20,6 +20,7 @@ edit_project_json () {
         local _EDIT_PROJECT_VERSION; _EDIT_PROJECT_VERSION=$(grep -c 'project_version' "${_FILE}")
         if [ "${_EDIT_PROJECT_VERSION:-0}" -ge 1 ]; then
             log_term 0 "Updating project_version in \"${_FILE}\"." -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             # Preserve any build data appended to the version
             local _BUILD; _BUILD=$(jq --raw-output '"\(.variables.project_version)"' "${_FILE}" | cut -s -d'_' -f2-)
             local _EDIT_FILE; _EDIT_FILE=$(jq ".variables.project_version|=\"${_RELEASE}${_BUILD:+_${_BUILD}}\"" "${_FILE}")
@@ -80,8 +81,10 @@ edit_deploy_templates () {
     # This matches a release (v1.3.0) a dev release (v1.3.0-dev) or master or develop
     local _RELEASE_REGEX="\(\(v\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\(-dev\)\{0,1\}\)\|master\|develop\)"
 
-    sed -i "s:nubis-consul//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-consul//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
+    log_term 0 "Updating Terraform pinned versions in \"${_VPC_FILE}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
+    sed -i "s:nubis-consul//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-consul//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-jumphost//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-jumphost//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-fluent-collector//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-fluent-collector//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-prometheus//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-prometheus//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
@@ -89,6 +92,10 @@ edit_deploy_templates () {
     sed -i "s:nubis-sso//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-sso//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-terraform-vpn?ref=${_RELEASE_REGEX}:nubis-terraform-vpn?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-terraform//images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-kubernetes//nubis/terraform?ref${_RELEASE_REGEX}:nubis-kubernetes//nubis/terraform?ref${_REF}:g" "${_VPC_FILE}"
+
+    local _META_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/global/meta/main.tf"
+    sed -i "s:nubis-terraform-cloudhealth?ref=${_RELEASE_REGEX}:nubis-terraform-cloudhealth?ref=${_REF}:g" "${_META_FILE}"
 
     # Check in the edits
     #+ Unless we are on master or develop (assume these are test builds)
@@ -107,6 +114,38 @@ edit_deploy_templates () {
         fi
     fi
     cd "${ENTRY_PWD}" || exit 0
+}
+
+edit_terraform_templates () {
+    local -r _RELEASE="${1}"
+    local -r _GIT_SHA="${2}"
+    local _REF
+    if [ "${_RELEASE:-NULL}" == 'NULL' ]; then
+        log_term 0 "Relesae number required"
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        $0 edit help
+        exit 1
+    fi
+    if [ "${_GIT_SHA:-NULL}" == 'NULL' ]; then
+        _REF="${_RELEASE}"
+    else
+        _REF="${_GIT_SHA}"
+    fi
+
+    # This matches a release (v1.3.0) a dev release (v1.3.0-dev) or master or develop
+    local _RELEASE_REGEX="\(\(v\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\(-dev\)\{0,1\}\)\|master\|develop\)"
+
+    mapfile -t TERRAFORM_FILES < <(find nubis/terraform/*.tf -type f -a \! -name '*.tmpl' )
+    for FILE in "${TERRAFORM_FILES[@]}"; do
+        log_term 0 "Updating pinned Terraform version(s) in \"${FILE}\"." -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        sed -i "s:nubis-terraform//images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform///images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//worker/userdata?ref=${_RELEASE_REGEX}:nubis-terraform//worker/userdata?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//worker?ref=${_RELEASE_REGEX}:nubis-terraform//worker?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//load_balancer?ref=${_RELEASE_REGEX}:nubis-terraform//load_balancer?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//dns?ref=${_RELEASE_REGEX}:nubis-terraform//dns?ref=${_REF}:g" "${FILE}"
+    done
 }
 
 modify () {
