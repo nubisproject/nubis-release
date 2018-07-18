@@ -511,15 +511,15 @@ get_release_issue () {
         _ISSUE_COUNT=$((_ISSUE_COUNT + 1))
     done
     if (( "${_ISSUE_COUNT}" == 0 )); then
-        log_term 0 "Warning: Release issue not found."
+        log_term 2 "Release issue not found."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         return 1
     elif (( "${_ISSUE_COUNT}" == 1 )); then
-        log_term 1 "Congratulations: Got exactly one release issue number."
+        log_term 2 "Congratulations: Got exactly one release issue number."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     elif (( "${_ISSUE_COUNT}" >= 2 )); then
         _ISSUE_NUMBER=$(echo "${_ISSUE_NUMBER}" | cut -d ' ' -f 1)
-        log_term 1 "Warning: Got \"${_ISSUE_COUNT}\" issue numbers. Returning only the first: \"${_ISSUE_NUMBER}\"."
+        log_term 2 "Warning: Got \"${_ISSUE_COUNT}\" issue numbers. Returning only the first: \"${_ISSUE_NUMBER}\"."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     fi
     echo "${_ISSUE_NUMBER}"
@@ -532,19 +532,23 @@ file_issue () {
     local _ISSUE_TITLE="${2}"
     local _ISSUE_COMMENT="${3}"
     local _MILESTONE="${4}"
-    log_term 1 "Filing release issue for repository: \"${_REPOSITORY}\"." -e
+    log_term 1 "Checking for existing release issue for repository: \"${_REPOSITORY}\"." -e
     log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     # We do not need multiple release issues
     _ISSUE_EXISTS=$(get_release_issue "${_REPOSITORY}" "${_ISSUE_TITLE}" "${_MILESTONE}")
     # https://github.com/koalaman/shellcheck/wiki/SC2181
     # shellcheck disable=SC2181
     if [ $? == 0 ]; then
-        log_term 2 "Release issue exists. Returned: '${_ISSUE_EXISTS}'. Skipping 'file_issue'."
+        log_term 1 "Release issue exists. Returned: '${_ISSUE_EXISTS}'. Skipping 'file_issue'."
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     elif [ "${_MILESTONE:-NULL}" == 'NULL' ]; then
+        log_term 0 "Filing release issue for repository: \"${_REPOSITORY}\"." -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         github_api_limit_check '1'
         ghi --no-color open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
     else
+        log_term 0 "Filing release issue for repository: \"${_REPOSITORY}\"." -e
+        log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         github_api_limit_check '1'
         ghi --no-color open --message "${_ISSUE_COMMENT}" "${_ISSUE_TITLE}" --milestone "${_MILESTONE}" -- "${GITHUB_ORGINIZATION}"/"${_REPOSITORY}" > /dev/null 2>&1
     fi
@@ -589,9 +593,15 @@ check_in_changes () {
     if [ ${CONTINUE:-y} == "Y" ] || [ ${CONTINUE:-y} == "y" ]; then
         log_term 1 "\nChecking in changes to '${_FILE}' for \"${_REPOSITORY}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git add ${_FILE}
-        cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git commit -m "${_MESSAGE} [skip ci]"
-        cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git push
+        if ! git diff-files --quiet --ignore-submodules --; then
+            # git diff-files --name-status -r --ignore-submodules --
+            cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git add ${_FILE}
+            cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git commit -m "${_MESSAGE} [skip ci]"
+            cd "${REPOSITORY_PATH}/${_REPOSITORY}" && git push
+        else
+            log_term 1 "\nNo staged changes for \"${_REPOSITORY}\"." -e
+            log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        fi
     fi
 }
 
@@ -935,6 +945,13 @@ repository_setup_release () {
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         edit_deploy_templates "${_RELEASE}"
     fi
+
+    # Update the pinned version number to the current ${_RELEASE}
+    #+ for released Trraform modules
+    log_term 1 "\nEditing Terraform templates for repository: \"${_REPOSITORY}\"." -e
+    log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    edit_terraform_templates "${_RELEASE}"
+    check_in_changes "${_REPOSITORY}" "Update pinned Terraform version for ${_RELEASE} release"
 
     # File release issue
     local _ISSUE_TITLE="Tag ${_RELEASE} release"
