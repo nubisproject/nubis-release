@@ -141,7 +141,7 @@ edit_terraform_templates () {
         log_term 0 "Updating pinned Terraform version(s) in \"${FILE}\"." -e
         log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         sed -i "s:nubis-terraform//images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${FILE}"
-        sed -i "s:nubis-terraform///images?ref=${_RELEASE_REGEX}:nubis-terraform///images?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform///images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${FILE}"
         sed -i "s:nubis-terraform//worker/userdata?ref=${_RELEASE_REGEX}:nubis-terraform//worker/userdata?ref=${_REF}:g" "${FILE}"
         sed -i "s:nubis-terraform//worker?ref=${_RELEASE_REGEX}:nubis-terraform//worker?ref=${_REF}:g" "${FILE}"
         sed -i "s:nubis-terraform//load_balancer?ref=${_RELEASE_REGEX}:nubis-terraform//load_balancer?ref=${_REF}:g" "${FILE}"
