@@ -135,7 +135,6 @@ edit_terraform_templates () {
     # This matches a release (v1.3.0) a dev release (v1.3.0-dev) or master or develop
     local _RELEASE_REGEX="\(\(v\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\(-dev\)\{0,1\}\)\|master\|develop\)"
 
-#    declare -a TERRAFORM_FILES=( $(find nubis/terraform/*.tf -type f -a \! -name '*.tmpl' -print0 | xargs -0) )
     mapfile -t TERRAFORM_FILES < <(find nubis/terraform/*.tf -type f -a \! -name '*.tmpl' )
     for FILE in "${TERRAFORM_FILES[@]}"; do
         log_term 0 "Updating pinned Terraform version(s) in \"${FILE}\"." -e
