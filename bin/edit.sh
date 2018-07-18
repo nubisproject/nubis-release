@@ -21,7 +21,7 @@ edit_project_json () {
         if [ "${_EDIT_PROJECT_VERSION:-0}" -ge 1 ]; then
             log_term 0 "Updating project_version in \"${_FILE}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-           # Preserve any build data appended to the version
+            # Preserve any build data appended to the version
             local _BUILD; _BUILD=$(jq --raw-output '"\(.variables.project_version)"' "${_FILE}" | cut -s -d'_' -f2-)
             local _EDIT_FILE; _EDIT_FILE=$(jq ".variables.project_version|=\"${_RELEASE}${_BUILD:+_${_BUILD}}\"" "${_FILE}")
             echo "${_EDIT_FILE}" > "${_FILE}"
