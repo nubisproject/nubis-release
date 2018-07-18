@@ -1,10 +1,28 @@
 # Change Log
 
-## [v0.5.2](https://github.com/nubisproject/nubis-release/tree/v0.5.2) (2018-07-11)
-[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.5.1...v0.5.2)
+## [v0.6.0](https://github.com/nubisproject/nubis-release/tree/v0.6.0) (2018-07-18)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.5.2...v0.6.0)
+
+**Closed issues:**
+
+- Make sure versions are correctly pinned during release [\#87](https://github.com/nubisproject/nubis-release/issues/87)
+- nubis-skel terraform/main.tf version pinning [\#21](https://github.com/nubisproject/nubis-release/issues/21)
 
 **Merged pull requests:**
 
+- Fix terraform version pinning [\#88](https://github.com/nubisproject/nubis-release/pull/88) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v0.5.2](https://github.com/nubisproject/nubis-release/tree/v0.5.2) (2018-07-11)
+[Full Changelog](https://github.com/nubisproject/nubis-release/compare/v0.5.1...v0.5.2)
+
+**Closed issues:**
+
+- Tag v0.5.2 release [\#84](https://github.com/nubisproject/nubis-release/issues/84)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v0.5.2 release \[skip ci\] [\#86](https://github.com/nubisproject/nubis-release/pull/86) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v0.5.2 release \[skip ci\] [\#85](https://github.com/nubisproject/nubis-release/pull/85) ([nubis-automation](https://github.com/nubis-automation))
 - Bump Alpine package versions for build dependancy [\#83](https://github.com/nubisproject/nubis-release/pull/83) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v0.5.1](https://github.com/nubisproject/nubis-release/tree/v0.5.1) (2018-07-11)
