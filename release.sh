@@ -94,8 +94,12 @@ setup_main_command () {
         fi
         local RUNTIME_FILE_PATH; RUNTIME_FILE_PATH="$(pwd)/nubis/docker/docker_runtime_configs"
         declare -a DOCKER_COMMAND=( 'docker' 'run' '--rm' '--env-file' "${SCRIPT_PATH}/bin/docker_env" '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' "${RUNTIME_FILE_PATH}/git-credentials:/root/.git-credentials-seed" '-v' "${RUNTIME_FILE_PATH}/gitconfig:/root/.gitconfig" '-v' "${RUNTIME_FILE_PATH}/hub:/root/.config/hub" '--mount' 'source=nubis-release,target=/nubis/.repositories' "${DOCKER_RELEASE_CONTAINER}" )
-        if [ ${#VERBOSE} != 0 ]; then
+        if [ ${#VERBOSE} != 0 ]&& [ ${#SET_X} == 0 ]; then
             MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        elif [ ${#VERBOSE} == 0 ] && [ ${#SET_X} != 0 ]; then
+            MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' '--setx' '--oath-token' "${GITHUB_OATH_TOKEN}" )
+        elif [ ${#VERBOSE} != 0 ] && [ ${#SET_X} != 0 ]; then
+            MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' "${VERBOSE}" '--setx' '--oath-token' "${GITHUB_OATH_TOKEN}" )
         else
             MAIN_EXEC=( "${DOCKER_COMMAND[@]}" '--non-interactive' '--oath-token' "${GITHUB_OATH_TOKEN}" )
         fi
@@ -443,6 +447,7 @@ while [ "$1" != "" ]; do
             log_term 1 "Setting 'set -x'"
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             set -x
+            SET_X=1
         ;;
         build )
             shift
