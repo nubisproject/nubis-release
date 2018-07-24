@@ -224,19 +224,19 @@ while [ "$1" != "" ]; do
             REPOSITORY="${2}"
             RELEASE="${3}"
             source_files || exit 1
-            # Set up release
-            log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
+             # Build the AMI
+            log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            if ! "$0" setup-release "${REPOSITORY}" "${RELEASE}" ; then
-                log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
+            if ! "$0" build "${REPOSITORY}" "${RELEASE}" ; then
+                log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
             fi
-            # Build the AMI
-            log_term 1 "\nBuilding AMIs for repository: \"${REPOSITORY}\"." -e
+           # Set up release
+            log_term 1 "\nSetting up release: \"${REPOSITORY}\"." -e
             log_term 3 "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            if ! "$0" build "${REPOSITORY}" "${RELEASE}" 'SKIP_CLONE' ; then
-                log_term 0 "Building for '${REPOSITORY}' failed. Unable to continue."
+            if ! "$0" setup-release "${REPOSITORY}" "${RELEASE}" 'SKIP_CLONE' ; then
+                log_term 0 "Setting up release for '${REPOSITORY}' failed. Unable to continue."
                 log_term 0 "Aborting....."
                 exit 1
             fi
