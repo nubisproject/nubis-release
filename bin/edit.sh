@@ -92,7 +92,7 @@ edit_deploy_templates () {
     sed -i "s:nubis-sso//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-sso//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-terraform-vpn?ref=${_RELEASE_REGEX}:nubis-terraform-vpn?ref=${_REF}:g" "${_VPC_FILE}"
     sed -i "s:nubis-terraform//images?ref=${_RELEASE_REGEX}:nubis-terraform//images?ref=${_REF}:g" "${_VPC_FILE}"
-    sed -i "s:nubis-kubernetes//nubis/terraform?ref${_RELEASE_REGEX}:nubis-kubernetes//nubis/terraform?ref${_REF}:g" "${_VPC_FILE}"
+    sed -i "s:nubis-kubernetes//nubis/terraform?ref=${_RELEASE_REGEX}:nubis-kubernetes//nubis/terraform?ref=${_REF}:g" "${_VPC_FILE}"
 
     local _META_FILE="${REPOSITORY_PATH}/nubis-deploy/modules/global/meta/main.tf"
     sed -i "s:nubis-terraform-cloudhealth?ref=${_RELEASE_REGEX}:nubis-terraform-cloudhealth?ref=${_REF}:g" "${_META_FILE}"
@@ -145,6 +145,9 @@ edit_terraform_templates () {
         sed -i "s:nubis-terraform//worker?ref=${_RELEASE_REGEX}:nubis-terraform//worker?ref=${_REF}:g" "${FILE}"
         sed -i "s:nubis-terraform//load_balancer?ref=${_RELEASE_REGEX}:nubis-terraform//load_balancer?ref=${_REF}:g" "${FILE}"
         sed -i "s:nubis-terraform//dns?ref=${_RELEASE_REGEX}:nubis-terraform//dns?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//info?ref=${_RELEASE_REGEX}:nubis-terraform//info?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//bucket?ref=${_RELEASE_REGEX}:nubis-terraform//bucket?ref=${_REF}:g" "${FILE}"
+        sed -i "s:nubis-terraform//database?ref=${_RELEASE_REGEX}:nubis-terraform//database?ref=${_REF}:g" "${FILE}"
     done
 }
 
